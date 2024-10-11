@@ -6,6 +6,8 @@ if (DetailsFramework.IsTBCWow() or DetailsFramework.IsWotLKWow() or DetailsFrame
 	return
 end
 
+Details.rating_cache = {}
+
 local detailsFramework = DetailsFramework
 
 SLASH_MYTHIC1 = "/mythic"
@@ -30,7 +32,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			---@type detailsframework
 			local detailsFramework = detailsFramework
 
-			local CONST_WINDOW_WIDTH = 614
+			local CONST_WINDOW_WIDTH = 510
 			local CONST_WINDOW_HEIGHT = 300
 			local CONST_SCROLL_LINE_HEIGHT = 20
 			local CONST_SCROLL_LINE_AMOUNT = 30
@@ -70,62 +72,53 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			detailsFramework:SetFontSize(statusBar.text, 12)
 			detailsFramework:SetFontColor(statusBar.text, "gray")
 
-			-- local requestFromGuildButton = detailsFramework:CreateButton(f, function()
-			-- 	local guildName = GetGuildInfo("player")
-			-- 	if (guildName) then
-			-- 		f:RegisterEvent("GUILD_ROSTER_UPDATE")
+			local requestFromGuildButton = detailsFramework:CreateButton(f, function()
+				local guildName = GetGuildInfo("player")
+				if (guildName) then
+					f:RegisterEvent("GUILD_ROSTER_UPDATE")
 
-			-- 		C_Timer.NewTicker(1, function()
-			-- 			f:RefreshData()
-			-- 		end, 30)
+					C_Timer.NewTicker(1, function()
+						f:RefreshData()
+					end, 30)
 
-			-- 		C_Timer.After(30, function()
-			-- 			f:UnregisterEvent("GUILD_ROSTER_UPDATE")
-			-- 		end)
-			-- 		C_GuildInfo.GuildRoster()
+					C_Timer.After(30, function()
+						f:UnregisterEvent("GUILD_ROSTER_UPDATE")
+					end)
+					C_GuildInfo.GuildRoster()
 
-			-- 		openRaidLib.RequestKeystoneDataFromGuild()
-			-- 	end
-			-- end, 100, 22, "Request from Guild")
-			-- requestFromGuildButton:SetPoint("bottomleft", statusBar, "topleft", 2, 2)
-			-- requestFromGuildButton:SetTemplate(detailsFramework:GetTemplate("button", "OPTIONS_BUTTON_TEMPLATE"))
-			-- requestFromGuildButton:SetIcon("UI-RefreshButton", 20, 20, "overlay", {0, 1, 0, 1}, "lawngreen")
-			-- requestFromGuildButton:SetFrameLevel(f:GetFrameLevel()+5)
-			-- f.RequestFromGuildButton = requestFromGuildButton
+					openRaidLib.RequestKeystoneDataFromGuild()
+				end
+			end, 100, 22, "Request from Guild")
+			requestFromGuildButton:SetPoint("bottomleft", statusBar, "topleft", 2, 2)
+			requestFromGuildButton:SetTemplate(detailsFramework:GetTemplate("button", "OPTIONS_BUTTON_TEMPLATE"))
+			requestFromGuildButton:SetIcon("UI-RefreshButton", 20, 20, "overlay", {0, 1, 0, 1}, "lawngreen")
+			requestFromGuildButton:SetFrameLevel(f:GetFrameLevel()+5)
+			f.RequestFromGuildButton = requestFromGuildButton
 
-			--header``
+			--header
 
 			local headerTable = {}
 			table.insert(headerTable, {
 				text = "", -- Player Name
-				width = 140,        
+				width = 100,        
 				canSort = true,
 				dataType = "string",
 				order = "DESC",
 				offset = 0
 			})
 
+
 			for i = 1, #DUNGEONS do
 				local dungeon = DUNGEONS[i] ---@type Dungeon
 				table.insert(headerTable, {
 					text = dungeon.shortName,
-					width = 40,        -- Adjust width as needed
+					width = 50,        -- Adjust width as needed
 					canSort = true,
 					dataType = "string", -- Assuming shortName is a string, adjust if necessary
 					order = "DESC",
 					offset = 0
 				})
 			end
-
-			-- local headerTable = {
-			-- 	{text = "", width = 140, canSort = true, dataType = "string", order = "DESC", offset = 0},
-			-- 	{text = "Class", width = 40, canSort = true, dataType = "number", order = "DESC", offset = 0},
-			-- 	{text = "Player Name", width = 140, canSort = true, dataType = "string", order = "DESC", offset = 0},
-			-- 	{text = "Level", width = 60, canSort = true, dataType = "number", order = "DESC", offset = 0, selected = true},
-			-- 	{text = "Dungeon", width = 240, canSort = true, dataType = "string", order = "DESC", offset = 0},
-			-- 	--{text = "Classic Dungeon", width = 120, canSort = true, dataType = "string", order = "DESC", offset = 0},
-			-- 	{text = "Mythic+ Rating", width = 100, canSort = true, dataType = "number", order = "DESC", offset = 0},
-			-- }
 
 			-- local headerTable = {
 			-- 	{text = "ShortName", width = 40, canSort = true, dataType = "string", order = "DESC", offset = 0},
@@ -168,7 +161,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 					if (unitTable) then
 						local line = self:GetLine(i)
 
-						local unitName, level, mapID, challengeMapID, classID, rating, mythicPlusMapID, classIconTexture, iconTexCoords, mapName, inMyParty, isOnline, isGuildMember = unpack(unitTable)
+						local unitName, level, mapID, challengeMapID, classID, rating, mythicPlusMapID, mapName, inMyParty, isOnline, isGuildMember = unpack(unitTable)
 
 						if (mapName == "") then
 							mapName = "user need update details!"
@@ -190,9 +183,12 @@ function SlashCmdList.MYTHIC(msg, editbox)
 							end
 						end
 
-						line.icon:SetTexture(classIconTexture)
-						local L, R, T, B = unpack(iconTexCoords)
-						line.icon:SetTexCoord(L+0.02, R-0.02, T+0.02, B-0.02)
+						local dungeon = DUNGEONS[i]
+						if (dungeon) then
+							line.shortNameText.text = dungeon.shortName
+						else 
+							line.shortNameText.text = ""
+						end
 
 						--remove the realm name from the player name (if any)
 						local unitNameNoRealm = detailsFramework:RemoveRealmName(unitName)
@@ -226,20 +222,22 @@ function SlashCmdList.MYTHIC(msg, editbox)
 							line:SetBackdropColor(unpack(backdrop_color))
 						end
 
+						local classColor = GetClassColor(classID);
+
 						if (isOnline) then
-							line.playerNameText.textcolor = "white"
+							line.shortNameText.textcolor = "white"
+							line.playerNameText.textcolor = classColor
 							line.keystoneLevelText.textcolor = "white"
 							line.dungeonNameText.textcolor = "white"
 							line.classicDungeonNameText.textcolor = "white"
 							line.ratingText.textcolor = "white"
-							line.icon:SetAlpha(1)
 						else
+							line.shortNameText.textcolor = "gray"
 							line.playerNameText.textcolor = "gray"
 							line.keystoneLevelText.textcolor = "gray"
 							line.dungeonNameText.textcolor = "gray"
 							line.classicDungeonNameText.textcolor = "gray"
 							line.ratingText.textcolor = "gray"
-							line.icon:SetAlpha(.6)
 						end
 					end
 				end
@@ -282,9 +280,8 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				line:SetScript("OnEnter", lineOnEnter)
 				line:SetScript("OnLeave", lineOnLeave)
 
-				--class icon
-				local icon = line:CreateTexture("$parentClassIcon", "overlay")
-				icon:SetSize(CONST_SCROLL_LINE_HEIGHT - 2, CONST_SCROLL_LINE_HEIGHT - 2)
+				-- dungeon shortName
+				local shortNameText = detailsFramework:CreateLabel(line, "")
 
 				--player name
 				local playerNameText = detailsFramework:CreateLabel(line, "")
@@ -301,22 +298,27 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				--player rating
 				local ratingText = detailsFramework:CreateLabel(line, "")
 
-				line.icon = icon
+				line.shortNameText = shortNameText
 				line.playerNameText = playerNameText
 				line.keystoneLevelText = keystoneLevelText
 				line.dungeonNameText = dungeonNameText
 				line.classicDungeonNameText = classicDungeonNameText
 				line.ratingText = ratingText
-
+				
 				line:AddFrameToHeaderAlignment(playerNameText)
-				line:AddFrameToHeaderAlignment(keystoneLevelText)
-				line:AddFrameToHeaderAlignment(dungeonNameText)
-				line:AddFrameToHeaderAlignment(ratingText)
-				line:AddFrameToHeaderAlignment(ratingText)
-				line:AddFrameToHeaderAlignment(ratingText)
-				line:AddFrameToHeaderAlignment(ratingText)
-				line:AddFrameToHeaderAlignment(ratingText)
-				line:AddFrameToHeaderAlignment(ratingText)
+				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
+				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
+				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
+				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
+				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
+				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
+				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
+				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
+				-- line:AddFrameToHeaderAlignment(shortNameText)
+				-- line:AddFrameToHeaderAlignment(keystoneLevelText)
+				-- line:AddFrameToHeaderAlignment(dungeonNameText)
+				-- --line:AddFrameToHeaderAlignment(classicDungeonNameText)
+				-- line:AddFrameToHeaderAlignment(ratingText)
 
 				line:AlignWithHeader(f.Header, "left")
 				return line
@@ -380,8 +382,6 @@ function SlashCmdList.MYTHIC(msg, editbox)
 
 					for unitName, keystoneInfo in pairs(keystoneData) do
 						local classId = keystoneInfo.classID
-						local classIcon = [[Interface\GLUES\CHARACTERCREATE\UI-CharacterCreate-Classes]]
-						local coords = CLASS_ICON_TCOORDS
 						local _, class = GetClassInfo(classId)
 
 						local mapName = C_ChallengeMode.GetMapUIInfo(keystoneInfo.mythicPlusMapID)
@@ -409,8 +409,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 								keystoneInfo.classID,
 								keystoneInfo.rating,
 								keystoneInfo.mythicPlusMapID,
-								classIcon,
-								coords[class],
+
 								mapName, --10
 								isInMyParty,
 								isOnline, --is false when the unit is from the cache
@@ -426,18 +425,18 @@ function SlashCmdList.MYTHIC(msg, editbox)
 								--store the player information into a cache
 								keystoneTable.guild_name = guildName
 								keystoneTable.date = time()
-								Details.keystone_cache[unitName] = keystoneTable
+								Details.rating_cache[unitName] = keystoneTable
 							end
 						end
 					end
 
 					local cutoffDate = time() - (86400 * 7) --7 days
-					for unitName, keystoneTable in pairs(Details.keystone_cache) do
+					for unitName, keystoneTable in pairs(Details.rating_cache) do
 						--this unit in the cache isn't shown?
 						if (not unitsAdded[unitName] and keystoneTable.guild_name == guildName and keystoneTable.date > cutoffDate) then
 							if (keystoneTable[2] > 0 or keystoneTable[6] > 0) then
-								keystoneTable[11] = UnitInParty(unitName) and (string.byte(unitName, 1) + string.byte(unitName, 2)) or 0 --isInMyParty
-								keystoneTable[12] = false --isOnline
+								keystoneTable[9] = UnitInParty(unitName) and (string.byte(unitName, 1) + string.byte(unitName, 2)) or 0 --isInMyParty
+								keystoneTable[10] = false --isOnline
 								newData[#newData+1] = keystoneTable
 								unitsAdded[unitName] = true
 							end
@@ -483,7 +482,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				--remove offline guild players from the list
 				for i = #newData, 1, -1 do
 					local keystoneTable = newData[i]
-					if (not keystoneTable[12]) then
+					if (not keystoneTable[10]) then
 						tremove(newData, i)
 						newData.offlineGuildPlayers[#newData.offlineGuildPlayers+1] = keystoneTable
 					end
@@ -496,7 +495,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 					local playersInTheParty = {}
 					for i = #newData, 1, -1 do
 						local keystoneTable = newData[i]
-						if (keystoneTable[11] > 0) then
+						if (keystoneTable[9] > 0) then
 							playersInTheParty[#playersInTheParty+1] = keystoneTable
 							tremove(newData, i)
 						end
