@@ -222,11 +222,11 @@ function SlashCmdList.MYTHIC(msg, editbox)
 							line:SetBackdropColor(unpack(backdrop_color))
 						end
 
-						local classColor = GetClassColor(classID);
+						local _, className = GetClassInfo(classID)
 
 						if (isOnline) then
 							line.shortNameText.textcolor = "white"
-							line.playerNameText.textcolor = classColor
+							line.playerNameText.textcolor = className
 							line.keystoneLevelText.textcolor = "white"
 							line.dungeonNameText.textcolor = "white"
 							line.classicDungeonNameText.textcolor = "white"
