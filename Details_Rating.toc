@@ -1,0 +1,10 @@
+## Interface: 110002
+## Title: Details!: M+ Party Rating (plugin)
+## Notes: Show dungeon levels for your party members
+## RequiredDeps: Details
+## IconTexture: Interface\Icons\TEMP
+
+## X-Wago-ID: WL6Jk2Kv
+
+Details_Rating.lua
+db/db_dungeons.lua
