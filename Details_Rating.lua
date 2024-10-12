@@ -343,7 +343,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				local ratingData = openRaidLibRating.GetAllRatingInfo()
 				
 
-				DevTools_Dump(ratingData)
+				-- DevTools_Dump(ratingData)
 
 				--[=[
 					["Exudragão"] =  {
