@@ -4,8 +4,6 @@
 ## RequiredDeps: Details
 ## IconTexture: Interface\Icons\TEMP
 
-## X-Wago-ID: WL6Jk2Kv
-
 Details_Rating.lua
 Comms.lua
 db/db_dungeons.lua
