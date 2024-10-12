@@ -26,6 +26,11 @@ function SlashCmdList.MYTHIC(msg, editbox)
 	-- 	print(GetUnitName(roleName))
     -- end
 
+	local openRaidLibRating = LibStub:GetLibrary("LibOpenRaid_Rating-1.0", true)
+	if (openRaidLibRating) then
+		print("openRaidLibRating is loaded")
+	end
+
 	local openRaidLib = LibStub:GetLibrary("LibOpenRaid-1.0", true)
 	if (openRaidLib) then
 		if (not DetailsRatingInfoFrame) then
@@ -53,7 +58,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			f:SetScript("OnMouseUp", nil) --disable framework native moving scripts
 
 			local LibWindow = LibStub("LibWindow-1.1")
-			LibWindow.RegisterConfig(f, Details.keystone_frame.position)
+			LibWindow.RegisterConfig(f, Details.rating_frame.position)
 			LibWindow.MakeDraggable(f)
 			LibWindow.RestorePosition(f)
 
@@ -86,6 +91,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 					end)
 					C_GuildInfo.GuildRoster()
 
+					openRaidLibRating.RequestRatingDataFromGuild()
 					openRaidLib.RequestKeystoneDataFromGuild()
 				end
 			end, 100, 22, "Request from Guild")
@@ -333,6 +339,10 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				local newData = {}
 				newData.offlineGuildPlayers = {}
 				local keystoneData = openRaidLib.GetAllKeystonesInfo()
+				local ratingData = openRaidLibRating.GetAllRatingInfo()
+				
+
+				DevTools_Dump(ratingData)
 
 				--[=[
 					["Exudragão"] =  {
@@ -502,7 +512,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 					end
 
 					if (#playersInTheParty > 0) then
-						table.sort(playersInTheParty, function(t1, t2) return t1[11] > t2[11] end)
+						table.sort(playersInTheParty, function(t1, t2) return t1[9] > t2[9] end)
 						for i = 1, #playersInTheParty do
 							local keystoneTable = playersInTheParty[i]
 							table.insert(newData, 1, keystoneTable)
