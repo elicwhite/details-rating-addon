@@ -54,6 +54,8 @@ if (WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE and not isExpansion_Dragonflight()) t
     return
 end
 
+local LibAceSerializer = LibStub:GetLibrary("AceSerializer-3.0", true)
+
 local major = "LibOpenRaid_Rating-1.0"
 
 local CONST_LIB_VERSION = 143
@@ -98,7 +100,7 @@ end
     --show failures (when the function return an error) results to chat
     local CONST_DIAGNOSTIC_ERRORS = false
     --show the data to be sent and data received from comm
-    local CONST_DIAGNOSTIC_COMM = false
+    local CONST_DIAGNOSTIC_COMM = true
     --show data received from other players
     local CONST_DIAGNOSTIC_COMM_RECEIVED = false
 
@@ -1006,10 +1008,29 @@ end
 --------------------------------------------------------------------------------------------------------------------------------
 --~rating
 
+--- unitName with server
+--- classID
+--- rating
+--- table<dungeonId, rating>
+
+    ---@class MythicPlusRatingMapSummary	
+    ---@field mapScore number	
+    ---@field bestRunLevel number	
+    ---@field bestRunDurationMS number
+    ---@field finishedSuccess boolean	
+
+    ---@class ratinginfo
+    ---@field classID number
+    ---@field currentSeasonScore number
+    ---structure:
+    ---[challengeModeID] = MythicPlusRatingMapSummary
+    ---@field runs table<number, MythicPlusRatingMapSummary>
+
+    --manager constructor
     openRaidLib.RatingInfoManager = {
         --structure:
-        --[playerName][dungeonId] = maxRating
-        ---@type table<string, table<number, number>>
+        --[playerName] = ratinginfo
+        ---@type table<string, ratinginfo>
         RatingData = {},
     }
 
@@ -1079,16 +1100,30 @@ end
         end
 
     --privite stuff, these function can still be called, but not advised
+        ---@type ratinginfo
+        local ratingTablePrototype = {
+            classID = 0,
+            currentSeasonScore = 0,
+            runs = {}
+        }
 
     function openRaidLib.RatingInfoManager.UpdatePlayerRatingInfo(ratingInfo)
-        for _, v in ipairs(C_ChallengeMode.GetMapTable()) do
-            local affixScores, bestOverAllScore = C_MythicPlus.GetSeasonBestAffixScoreInfoForMap(v)
-            -- I'm not sure what value this is if you haven't run the dungeon yet
-            -- It could be nil, it could also be 0 which would make this if block unnecessary
-            if bestOverAllScore ~= nil then
-                ratingInfo[v] = bestOverAllScore
-            end
+        --- I really just want this whole thing
+        local summary = C_PlayerInfo.GetPlayerMythicPlusRatingSummary("player")
+
+        ratingInfo.currentSeasonScore = summary.currentSeasonScore
+
+        for _, runInfo in ipairs(summary.runs) do
+            ratingInfo.runs[runInfo.challengeModeID] = {
+                mapScore = runInfo.mapScore,
+                bestRunLevel = runInfo.bestRunLevel,
+                bestRunDurationMS = runInfo.bestRunDurationMS,
+                finishedSuccess = runInfo.finishedSuccess
+            }
         end
+        
+        local _, _, playerClassID = UnitClass("player")
+        ratingInfo.classID = playerClassID
     end
 
     function openRaidLib.RatingInfoManager.GetAllRatingInfo()
@@ -1100,9 +1135,7 @@ end
         local ratingInfo = openRaidLib.RatingInfoManager.RatingData[unitName]
         if (not ratingInfo and createNew) then
             ratingInfo = {}
-            for _, v in ipairs(C_ChallengeMode.GetMapTable()) do
-                ratingInfo[v] = 0
-            end
+            openRaidLib.TCopy(ratingInfo, ratingTablePrototype)
             openRaidLib.RatingInfoManager.RatingData[unitName] = ratingInfo
         end
         return ratingInfo
@@ -1113,7 +1146,14 @@ end
         local ratingInfo = openRaidLib.RatingInfoManager.GetRatingInfo(playerName, true)
         openRaidLib.RatingInfoManager.UpdatePlayerRatingInfo(ratingInfo)
     
-        local dataToSend = CONST_COMM_RATING_DATA_PREFIX .. "," .. openRaidLib.PackTable(ratingInfo)
+        local dataToSend = "" .. CONST_COMM_RATING_DATA_PREFIX .. ","
+
+        dataToSend = dataToSend .. ratingInfo.classID .. ","
+        dataToSend = dataToSend .. ratingInfo.currentSeasonScore .. ","
+        dataToSend = dataToSend .. openRaidLib.PackTable(ratingInfo.runs)
+        
+        -- local dataToSend = CONST_COMM_RATING_DATA_PREFIX .. "," .. serialized
+        -- local dataToSend = CONST_COMM_RATING_DATA_PREFIX .. "," .. ratingInfo.classID .. "," .. openRaidLib.PackTableAndSubTables(ratingInfo.summary)
         return dataToSend
     end
 
@@ -1162,23 +1202,26 @@ end
             return
         end
 
-        local numRatings = toNumber(data[1])
+        -- DevTools_Dump(deserialized)
+        -- print("deserialized")
 
-         --unpack the table as a pairs table
-        local unpackedTable = openRaidLib.UnpackTable(data, 1, true, true, numRatings)
-        print("Received from"..unitName)
-        DevTools_Dump(unpackedTable)
+        local classID = tonumber(data[1])
+        local currentSeasonScore = toNumber(data[2])
+        local numberOfRuns = toNumber(data[3]);
 
-        if (unpackedTable) then
-            local ratingInfo = openRaidLib.RatingInfoManager.GetRatingInfo(unitName, true)
+        -- unpack the table as a pairs table
+        local unpackedTable = openRaidLib.UnpackTable(data, 3, true, true, numberOfRuns)
 
-            for dungeonId, rating in pairs(unpackedTable) do
-                ratingInfo[dungeonId] = rating
-            end
+        local ratingInfo = openRaidLib.RatingInfoManager.GetRatingInfo(unitName, true)
+        ratingInfo.classID = classID
+        ratingInfo.currentSeasonScore = currentSeasonScore
 
-            --trigger public callback
-            openRaidLib.publicCallback.TriggerCallback("RatingUpdate", unitName, ratingInfo, openRaidLib.RatingInfoManager.RatingData)
+        for dungeonId, info in pairs(unpackedTable) do
+            ratingInfo.runs[dungeonId] = info
         end
+
+        --trigger public callback
+        openRaidLib.publicCallback.TriggerCallback("RatingUpdate", unitName, ratingInfo, openRaidLib.RatingInfoManager.RatingData)
     end
     openRaidLib.commHandler.RegisterComm(CONST_COMM_RATING_DATA_PREFIX, openRaidLib.RatingInfoManager.OnReceiveRatingData)
 

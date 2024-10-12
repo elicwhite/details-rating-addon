@@ -58,7 +58,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			f:SetScript("OnMouseUp", nil) --disable framework native moving scripts
 
 			local LibWindow = LibStub("LibWindow-1.1")
-			LibWindow.RegisterConfig(f, Details.rating_frame.position)
+			LibWindow.RegisterConfig(f, Details.keystone_frame.position)
 			LibWindow.MakeDraggable(f)
 			LibWindow.RestorePosition(f)
 
@@ -339,6 +339,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				local newData = {}
 				newData.offlineGuildPlayers = {}
 				local keystoneData = openRaidLib.GetAllKeystonesInfo()
+				openRaidLibRating.WipeRatingData()
 				local ratingData = openRaidLibRating.GetAllRatingInfo()
 				
 
