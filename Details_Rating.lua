@@ -8,6 +8,7 @@ end
 
 Details.rating_cache = {}
 
+---@type detailsframework
 local detailsFramework = DetailsFramework
 
 SLASH_MYTHIC1 = "/mythic"
@@ -15,6 +16,8 @@ SLASH_MYTCHI2 = "/rg"
 
 function SlashCmdList.MYTHIC(msg, editbox)
 	local DUNGEONS = ns.dungeons
+
+	table.sort(DUNGEONS, function(d1, d2) return d1.shortName < d2.shortName end)
 
 	for i = 1, #DUNGEONS do
         local dungeon = DUNGEONS[i] ---@type Dungeon
@@ -32,9 +35,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 
 	if (openRaidLib and openRaidLibRating) then
 		if (not DetailsRatingInfoFrame) then
-			---@type detailsframework
-			local detailsFramework = detailsFramework
-
+			
 			local CONST_WINDOW_WIDTH = 512
 			local CONST_WINDOW_HEIGHT = 300
 			local CONST_SCROLL_LINE_HEIGHT = 20
@@ -130,6 +131,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 					dataType = "string", -- Assuming shortName is a string, adjust if necessary
 					order = "DESC",
 					offset = 0,
+					-- align = "left"
 				})
 			end
 
