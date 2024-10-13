@@ -11,7 +11,7 @@ Details.rating_cache = {}
 local detailsFramework = DetailsFramework
 
 SLASH_MYTHIC1 = "/mythic"
-SLASH_MYTCHI2 = "/m"
+SLASH_MYTCHI2 = "/rg"
 
 function SlashCmdList.MYTHIC(msg, editbox)
 	local DUNGEONS = ns.dungeons
@@ -26,18 +26,16 @@ function SlashCmdList.MYTHIC(msg, editbox)
 	-- 	print(GetUnitName(roleName))
     -- end
 
+	---@module 'Comms'
 	local openRaidLibRating = LibStub:GetLibrary("LibOpenRaid_Rating-1.0", true)
-	if (openRaidLibRating) then
-		print("openRaidLibRating is loaded")
-	end
-
 	local openRaidLib = LibStub:GetLibrary("LibOpenRaid-1.0", true)
-	if (openRaidLib) then
+
+	if (openRaidLib and openRaidLibRating) then
 		if (not DetailsRatingInfoFrame) then
 			---@type detailsframework
 			local detailsFramework = detailsFramework
 
-			local CONST_WINDOW_WIDTH = 510
+			local CONST_WINDOW_WIDTH = 512
 			local CONST_WINDOW_HEIGHT = 300
 			local CONST_SCROLL_LINE_HEIGHT = 20
 			local CONST_SCROLL_LINE_AMOUNT = 30
@@ -65,7 +63,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			f:SetScript("OnEvent", function(self, event, ...)
 				if (f:IsShown()) then
 					if (event == "GUILD_ROSTER_UPDATE") then
-						self:RefreshData()
+						self:RefreshRatingData()
 					end
 				end
 			end)
@@ -83,7 +81,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 					f:RegisterEvent("GUILD_ROSTER_UPDATE")
 
 					C_Timer.NewTicker(1, function()
-						f:RefreshData()
+						f:RefreshRatingData()
 					end, 30)
 
 					C_Timer.After(30, function()
@@ -106,7 +104,16 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			local headerTable = {}
 			table.insert(headerTable, {
 				text = "", -- Player Name
-				width = 100,        
+				width = 80,
+				canSort = true,
+				dataType = "string",
+				order = "DESC",
+				offset = 0
+			})
+
+			table.insert(headerTable, {
+				text = "", -- Current rating
+				width = 40,        
 				canSort = true,
 				dataType = "string",
 				order = "DESC",
@@ -118,11 +125,11 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				local dungeon = DUNGEONS[i] ---@type Dungeon
 				table.insert(headerTable, {
 					text = dungeon.shortName,
-					width = 50,        -- Adjust width as needed
+					width = 40,        -- Adjust width as needed
 					canSort = true,
 					dataType = "string", -- Assuming shortName is a string, adjust if necessary
 					order = "DESC",
-					offset = 0
+					offset = 0,
 				})
 			end
 
@@ -137,7 +144,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			-- }
 
 			local headerOnClickCallback = function(headerFrame, columnHeader)
-				f.RefreshData()
+				f.RefreshRatingData()
 			end
 
 			local headerOptions = {
@@ -167,11 +174,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 					if (unitTable) then
 						local line = self:GetLine(i)
 
-						local unitName, level, mapID, challengeMapID, classID, rating, mythicPlusMapID, mapName, inMyParty, isOnline, isGuildMember = unpack(unitTable)
-
-						if (mapName == "") then
-							mapName = "user need update details!"
-						end
+						local unitName, classID, currentSeasonScore, runs = unpack(unitTable)
 
 						local rioProfile
 						if (RaiderIO) then
@@ -189,62 +192,73 @@ function SlashCmdList.MYTHIC(msg, editbox)
 							end
 						end
 
-						local dungeon = DUNGEONS[i]
-						if (dungeon) then
-							line.shortNameText.text = dungeon.shortName
-						else 
-							line.shortNameText.text = ""
-						end
+						-- local dungeon = DUNGEONS[i]
+						-- if (dungeon) then
+						-- 	line.shortNameText.text = dungeon.shortName
+						-- else 
+						-- 	line.shortNameText.text = ""
+						-- end
 
 						--remove the realm name from the player name (if any)
 						local unitNameNoRealm = detailsFramework:RemoveRealmName(unitName)
 						line.playerNameText.text = unitNameNoRealm
-						line.keystoneLevelText.text = level
-						line.dungeonNameText.text = mapName
-						detailsFramework:TruncateText(line.dungeonNameText, 240)
-						line.classicDungeonNameText.text = "" --mapNameChallenge
-						detailsFramework:TruncateText(line.classicDungeonNameText, 120)
-						line.inMyParty = inMyParty > 0
-						line.inMyGuild = isGuildMember
+						detailsFramework:TruncateText(line.playerNameText, 80)
 
-						if (rioProfile) then
-							local score = rioProfile.currentScore or 0
-							local previousScore = rioProfile.previousScore or 0
-							if (previousScore > score) then
-								score = previousScore
-								line.ratingText.text = rating .. " (" .. score .. ")"
-							else
-								line.ratingText.text = rating
-							end
-						else
-							line.ratingText.text = rating
+						line.currentSeasonScoreText.text = currentSeasonScore
+
+						for i = 1, #DUNGEONS do
+							local dungeon = DUNGEONS[i]
+							line.dungeonRatingTexts[i].text = runs[dungeon.keystone_instance].bestRunLevel or ""
 						end
 
-						if (line.inMyParty) then
-							line:SetBackdropColor(unpack(backdrop_color_inparty))
-						elseif (isGuildMember) then
-							line:SetBackdropColor(unpack(backdrop_color_inguild))
-						else
+						-- line.keystoneLevelText.text = level
+						-- line.dungeonNameText.text = mapName
+						-- detailsFramework:TruncateText(line.dungeonNameText, 240)
+						-- line.classicDungeonNameText.text = "" --mapNameChallenge
+						-- detailsFramework:TruncateText(line.classicDungeonNameText, 120)
+						-- line.inMyParty = inMyParty > 0
+						-- line.inMyGuild = isGuildMember
+
+						-- if (rioProfile) then
+						-- 	local score = rioProfile.currentScore or 0
+						-- 	local previousScore = rioProfile.previousScore or 0
+						-- 	if (previousScore > score) then
+						-- 		score = previousScore
+						-- 		line.ratingText.text = rating .. " (" .. score .. ")"
+						-- 	else
+						-- 		line.ratingText.text = rating
+						-- 	end
+						-- else
+						-- 	line.ratingText.text = rating
+						-- end
+
+						-- if (line.inMyParty) then
+						-- 	line:SetBackdropColor(unpack(backdrop_color_inparty))
+						-- elseif (isGuildMember) then
+						-- 	line:SetBackdropColor(unpack(backdrop_color_inguild))
+						-- else
 							line:SetBackdropColor(unpack(backdrop_color))
-						end
+						-- end
 
 						local _, className = GetClassInfo(classID)
 
-						if (isOnline) then
-							line.shortNameText.textcolor = "white"
+						-- if (isOnline) then
+							-- line.shortNameText.textcolor = "white"
 							line.playerNameText.textcolor = className
-							line.keystoneLevelText.textcolor = "white"
-							line.dungeonNameText.textcolor = "white"
-							line.classicDungeonNameText.textcolor = "white"
-							line.ratingText.textcolor = "white"
-						else
-							line.shortNameText.textcolor = "gray"
-							line.playerNameText.textcolor = "gray"
-							line.keystoneLevelText.textcolor = "gray"
-							line.dungeonNameText.textcolor = "gray"
-							line.classicDungeonNameText.textcolor = "gray"
-							line.ratingText.textcolor = "gray"
-						end
+							line.currentSeasonScoreText.textcolor = {RaiderIO.GetScoreColor(currentSeasonScore)}
+							
+							-- line.keystoneLevelText.textcolor = "white"
+							-- line.dungeonNameText.textcolor = "white"
+							-- line.classicDungeonNameText.textcolor = "white"
+							-- line.ratingText.textcolor = "white"
+						-- else
+						-- 	line.shortNameText.textcolor = "gray"
+						-- 	line.playerNameText.textcolor = "gray"
+						-- 	line.keystoneLevelText.textcolor = "gray"
+						-- 	line.dungeonNameText.textcolor = "gray"
+						-- 	line.classicDungeonNameText.textcolor = "gray"
+						-- 	line.ratingText.textcolor = "gray"
+						-- end
 					end
 				end
 			end
@@ -287,39 +301,54 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				line:SetScript("OnLeave", lineOnLeave)
 
 				-- dungeon shortName
-				local shortNameText = detailsFramework:CreateLabel(line, "")
+				-- local shortNameText = detailsFramework:CreateLabel(line, "")
+
+
+				local dungeonTexts = {}
+				for i = 1, #DUNGEONS do
+					local dungeonText = detailsFramework:CreateLabel(line, "")
+
+					table.insert(dungeonTexts, dungeonText)
+				end
+
+				line.dungeonRatingTexts = dungeonTexts
+
 
 				--player name
 				local playerNameText = detailsFramework:CreateLabel(line, "")
 
-				--keystone level
-				local keystoneLevelText = detailsFramework:CreateLabel(line, "")
+				-- player rating
+				local currentSeasonScoreText = detailsFramework:CreateLabel(line, "")
 
-				--dungeon name
-				local dungeonNameText = detailsFramework:CreateLabel(line, "")
+				-- --keystone level
+				-- local keystoneLevelText = detailsFramework:CreateLabel(line, "")
 
-				--classic dungeon name
-				local classicDungeonNameText = detailsFramework:CreateLabel(line, "")
+				-- --dungeon name
+				-- local dungeonNameText = detailsFramework:CreateLabel(line, "")
 
-				--player rating
-				local ratingText = detailsFramework:CreateLabel(line, "")
+				-- --classic dungeon name
+				-- local classicDungeonNameText = detailsFramework:CreateLabel(line, "")
 
-				line.shortNameText = shortNameText
+				-- --player rating
+				-- local ratingText = detailsFramework:CreateLabel(line, "")
+
+				-- line.shortNameText = shortNameText
 				line.playerNameText = playerNameText
-				line.keystoneLevelText = keystoneLevelText
-				line.dungeonNameText = dungeonNameText
-				line.classicDungeonNameText = classicDungeonNameText
-				line.ratingText = ratingText
+				line.currentSeasonScoreText = currentSeasonScoreText
+				-- line.keystoneLevelText = keystoneLevelText
+				-- line.dungeonNameText = dungeonNameText
+				-- line.classicDungeonNameText = classicDungeonNameText
+				-- line.ratingText = ratingText
 				
 				line:AddFrameToHeaderAlignment(playerNameText)
-				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
-				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
-				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
-				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
-				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
-				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
-				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
-				line:AddFrameToHeaderAlignment(detailsFramework:CreateLabel(line, "10"))
+				line:AddFrameToHeaderAlignment(currentSeasonScoreText)
+
+				for i = 1, #DUNGEONS do
+					local dungeonText = dungeonTexts[i]
+					line:AddFrameToHeaderAlignment(dungeonText)
+				end
+
+
 				-- line:AddFrameToHeaderAlignment(shortNameText)
 				-- line:AddFrameToHeaderAlignment(keystoneLevelText)
 				-- line:AddFrameToHeaderAlignment(dungeonNameText)
@@ -334,212 +363,37 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			for i = 1, CONST_SCROLL_LINE_AMOUNT do
 				scrollFrame:CreateLine(createLineForScroll)
 			end
-
-			function f.RefreshData()
+			
+			function f.RefreshRatingData() 
 				local newData = {}
-				newData.offlineGuildPlayers = {}
-				local keystoneData = openRaidLib.GetAllKeystonesInfo()
-				openRaidLibRating.WipeRatingData()
+				---@as table<string, ratinginfo>
 				local ratingData = openRaidLibRating.GetAllRatingInfo()
-				
 
-				-- DevTools_Dump(ratingData)
+				if (ratingData) then
+					for unitName, ratingInfo in pairs(ratingData) do
+						local ratingTable = {
+							unitName,
+							ratingInfo.classID,
+							ratingInfo.currentSeasonScore,
+							ratingInfo.runs,
+						}
 
-				--[=[
-					["Exudragão"] =  {
-						["mapID"] = 2526,
-						["challengeMapID"] = 402,
-						["mythicPlusMapID"] = 0,
-						["rating"] = 215,
-						["classID"] = 13,
-						["level"] = 6,
-					},
-				--]=]
-
-				local guildUsers = {}
-				local totalMembers, onlineMembers, onlineAndMobileMembers = GetNumGuildMembers()
-
-				--[=[
-				local unitsInMyGroup = {
-					[Details:GetFullName("player")] = true,
-				}
-				for i = 1, GetNumGroupMembers() do
-					local unitName = Details:GetFullName("party" .. i)
-					unitsInMyGroup[unitName] = true
-				end
-				--]=]
-
-				--create a string to use into the gsub call when removing the realm name from the player name, by default all player names returned from GetGuildRosterInfo() has PlayerName-RealmName format
-				local realmNameGsub = "%-.*"
-				local guildName = GetGuildInfo("player")
-
-				if (guildName) then
-					for i = 1, totalMembers do
-						local fullName, rank, rankIndex, level, class, zone, note, officernote, online, isAway, classFileName, achievementPoints, achievementRank, isMobile, canSoR, repStanding, guid = GetGuildRosterInfo(i)
-						if (fullName) then
-							fullName = fullName:gsub(realmNameGsub, "")
-							if (online) then
-								guildUsers[fullName] = true
-							end
-						else
-							break
-						end
+						newData[#newData+1] = ratingTable
 					end
-				end
-
-				if (keystoneData) then
-					local unitsAdded = {}
-					local isOnline = true
-
-					for unitName, keystoneInfo in pairs(keystoneData) do
-						local classId = keystoneInfo.classID
-						local _, class = GetClassInfo(classId)
-
-						local mapName = C_ChallengeMode.GetMapUIInfo(keystoneInfo.mythicPlusMapID)
-						if (not mapName) then
-							mapName = C_ChallengeMode.GetMapUIInfo(keystoneInfo.challengeMapID)
-						end
-						if (not mapName and keystoneInfo.mapID) then
-							mapName = C_ChallengeMode.GetMapUIInfo(keystoneInfo.mapID)
-						end
-
-						mapName = mapName or "map name not found"
-
-						--local mapInfoChallenge = C_Map.GetMapInfo(keystoneInfo.challengeMapID)
-						--local mapNameChallenge = mapInfoChallenge and mapInfoChallenge.name or ""
-
-						local isInMyParty = UnitInParty(unitName) and (string.byte(unitName, 1) + string.byte(unitName, 2)) or 0
-						local isGuildMember = guildName and guildUsers[unitName] and true
-
-						if (keystoneInfo.level > 0 or keystoneInfo.rating > 0) then
-							local keystoneTable = {
-								unitName,
-								keystoneInfo.level,
-								keystoneInfo.mapID,
-								keystoneInfo.challengeMapID,
-								keystoneInfo.classID,
-								keystoneInfo.rating,
-								keystoneInfo.mythicPlusMapID,
-
-								mapName, --10
-								isInMyParty,
-								isOnline, --is false when the unit is from the cache
-								isGuildMember, --is a guild member
-								--mapNameChallenge,
-							}
-
-							newData[#newData+1] = keystoneTable --this is the table added into the keystone cache
-							unitsAdded[unitName] = true
-
-							--is this unitName listed as a player in the player's guild?
-							if (isGuildMember) then
-								--store the player information into a cache
-								keystoneTable.guild_name = guildName
-								keystoneTable.date = time()
-								Details.rating_cache[unitName] = keystoneTable
-							end
-						end
-					end
-
-					local cutoffDate = time() - (86400 * 7) --7 days
-					for unitName, keystoneTable in pairs(Details.rating_cache) do
-						--this unit in the cache isn't shown?
-						if (not unitsAdded[unitName] and keystoneTable.guild_name == guildName and keystoneTable.date > cutoffDate) then
-							if (keystoneTable[2] > 0 or keystoneTable[6] > 0) then
-								keystoneTable[9] = UnitInParty(unitName) and (string.byte(unitName, 1) + string.byte(unitName, 2)) or 0 --isInMyParty
-								keystoneTable[10] = false --isOnline
-								newData[#newData+1] = keystoneTable
-								unitsAdded[unitName] = true
-							end
-						end
-					end
-				end
-
-				--get which column is currently selected and the sort order
-				local columnIndex, order = f.Header:GetSelectedColumn()
-				local sortByIndex = 2
-
-				--sort by player class
-				if (columnIndex == 1) then
-					sortByIndex = 5
-
-				--sort by player name
-				elseif (columnIndex == 2) then
-					sortByIndex = 1
-
-				--sort by keystone level
-				elseif (columnIndex == 3) then
-					sortByIndex = 2
-
-				--sort by dungeon name
-				elseif (columnIndex == 4) then
-					sortByIndex = 3
-
-				--sort by classic dungeon name
-				--elseif (columnIndex == 5) then
-				--	sortByIndex = 4
-
-				--sort by mythic+ ranting
-				elseif (columnIndex == 5) then
-					sortByIndex = 6
-				end
-
-				if (order == "DESC") then
-					table.sort(newData, function(t1, t2) return t1[sortByIndex] > t2[sortByIndex] end)
-				else
-					table.sort(newData, function(t1, t2) return t1[sortByIndex] < t2[sortByIndex] end)
-				end
-
-				--remove offline guild players from the list
-				for i = #newData, 1, -1 do
-					local keystoneTable = newData[i]
-					if (not keystoneTable[10]) then
-						tremove(newData, i)
-						newData.offlineGuildPlayers[#newData.offlineGuildPlayers+1] = keystoneTable
-					end
-				end
-
-				newData.offlineGuildPlayers = detailsFramework.table.reverse(newData.offlineGuildPlayers)
-
-				--put players in the group at the top of the list
-				if (IsInGroup() and not IsInRaid()) then
-					local playersInTheParty = {}
-					for i = #newData, 1, -1 do
-						local keystoneTable = newData[i]
-						if (keystoneTable[9] > 0) then
-							playersInTheParty[#playersInTheParty+1] = keystoneTable
-							tremove(newData, i)
-						end
-					end
-
-					if (#playersInTheParty > 0) then
-						table.sort(playersInTheParty, function(t1, t2) return t1[9] > t2[9] end)
-						for i = 1, #playersInTheParty do
-							local keystoneTable = playersInTheParty[i]
-							table.insert(newData, 1, keystoneTable)
-						end
-					end
-				end
-
-				--reinsert offline guild players into the data
-				local offlinePlayers = newData.offlineGuildPlayers
-				for i = 1, #offlinePlayers do
-					local keystoneTable = offlinePlayers[i]
-					newData[#newData+1] = keystoneTable
 				end
 
 				scrollFrame:SetData(newData)
 				scrollFrame:Refresh()
 			end
 
-			function f.OnKeystoneUpdate(unitId, keystoneInfo, allKeystonesInfo)
+			function f.OnRatingUpdate(unitId, keystoneInfo, allRatingsInfo)
 				if (f:IsShown()) then
-					f.RefreshData()
+					f.RefreshRatingData()
 				end
 			end
 
 			f:SetScript("OnHide", function()
-				openRaidLib.UnregisterCallback(DetailsRatingInfoFrame, "KeystoneUpdate", "OnKeystoneUpdate")
+				openRaidLib.UnregisterCallback(DetailsRatingInfoFrame, "RatingUpdate", "OnRatingUpdate")
 			end)
 
 			f:SetScript("OnUpdate", function(self, deltaTime)
@@ -550,35 +404,243 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				self.lastUpdate = self.lastUpdate + deltaTime
 				if (self.lastUpdate > 1) then
 					self.lastUpdate = 0
-					self.RefreshData()
+					self.RefreshRatingData()
 				end
 			end)
+
+			-- function f.RefreshData()
+			-- 	local newData = {}
+			-- 	newData.offlineGuildPlayers = {}
+			-- 	local keystoneData = openRaidLib.GetAllKeystonesInfo()
+			-- 	openRaidLibRating.WipeRatingData()
+			-- 	local ratingData = openRaidLibRating.GetAllRatingInfo()
+				
+
+			-- 	-- DevTools_Dump(ratingData)
+
+			-- 	--[=[
+			-- 		["Exudragão"] =  {
+			-- 			["mapID"] = 2526,
+			-- 			["challengeMapID"] = 402,
+			-- 			["mythicPlusMapID"] = 0,
+			-- 			["rating"] = 215,
+			-- 			["classID"] = 13,
+			-- 			["level"] = 6,
+			-- 		},
+			-- 	--]=]
+
+			-- 	local guildUsers = {}
+			-- 	local totalMembers, onlineMembers, onlineAndMobileMembers = GetNumGuildMembers()
+
+			-- 	--[=[
+			-- 	local unitsInMyGroup = {
+			-- 		[Details:GetFullName("player")] = true,
+			-- 	}
+			-- 	for i = 1, GetNumGroupMembers() do
+			-- 		local unitName = Details:GetFullName("party" .. i)
+			-- 		unitsInMyGroup[unitName] = true
+			-- 	end
+			-- 	--]=]
+
+			-- 	--create a string to use into the gsub call when removing the realm name from the player name, by default all player names returned from GetGuildRosterInfo() has PlayerName-RealmName format
+			-- 	local realmNameGsub = "%-.*"
+			-- 	local guildName = GetGuildInfo("player")
+
+			-- 	if (guildName) then
+			-- 		for i = 1, totalMembers do
+			-- 			local fullName, rank, rankIndex, level, class, zone, note, officernote, online, isAway, classFileName, achievementPoints, achievementRank, isMobile, canSoR, repStanding, guid = GetGuildRosterInfo(i)
+			-- 			if (fullName) then
+			-- 				fullName = fullName:gsub(realmNameGsub, "")
+			-- 				if (online) then
+			-- 					guildUsers[fullName] = true
+			-- 				end
+			-- 			else
+			-- 				break
+			-- 			end
+			-- 		end
+			-- 	end
+
+			-- 	if (keystoneData) then
+			-- 		local unitsAdded = {}
+			-- 		local isOnline = true
+
+			-- 		for unitName, keystoneInfo in pairs(keystoneData) do
+			-- 			local classId = keystoneInfo.classID
+			-- 			local _, class = GetClassInfo(classId)
+
+			-- 			local mapName = C_ChallengeMode.GetMapUIInfo(keystoneInfo.mythicPlusMapID)
+			-- 			if (not mapName) then
+			-- 				mapName = C_ChallengeMode.GetMapUIInfo(keystoneInfo.challengeMapID)
+			-- 			end
+			-- 			if (not mapName and keystoneInfo.mapID) then
+			-- 				mapName = C_ChallengeMode.GetMapUIInfo(keystoneInfo.mapID)
+			-- 			end
+
+			-- 			mapName = mapName or "map name not found"
+
+			-- 			--local mapInfoChallenge = C_Map.GetMapInfo(keystoneInfo.challengeMapID)
+			-- 			--local mapNameChallenge = mapInfoChallenge and mapInfoChallenge.name or ""
+
+			-- 			local isInMyParty = UnitInParty(unitName) and (string.byte(unitName, 1) + string.byte(unitName, 2)) or 0
+			-- 			local isGuildMember = guildName and guildUsers[unitName] and true
+
+			-- 			if (keystoneInfo.level > 0 or keystoneInfo.rating > 0) then
+			-- 				local keystoneTable = {
+			-- 					unitName,
+			-- 					keystoneInfo.level,
+			-- 					keystoneInfo.mapID,
+			-- 					keystoneInfo.challengeMapID,
+			-- 					keystoneInfo.classID,
+			-- 					keystoneInfo.rating,
+			-- 					keystoneInfo.mythicPlusMapID,
+
+			-- 					mapName, --10
+			-- 					isInMyParty,
+			-- 					isOnline, --is false when the unit is from the cache
+			-- 					isGuildMember, --is a guild member
+			-- 					--mapNameChallenge,
+			-- 				}
+
+			-- 				newData[#newData+1] = keystoneTable --this is the table added into the keystone cache
+			-- 				unitsAdded[unitName] = true
+
+			-- 				--is this unitName listed as a player in the player's guild?
+			-- 				if (isGuildMember) then
+			-- 					--store the player information into a cache
+			-- 					keystoneTable.guild_name = guildName
+			-- 					keystoneTable.date = time()
+			-- 					Details.rating_cache[unitName] = keystoneTable
+			-- 				end
+			-- 			end
+			-- 		end
+
+			-- 		local cutoffDate = time() - (86400 * 7) --7 days
+			-- 		for unitName, keystoneTable in pairs(Details.rating_cache) do
+			-- 			--this unit in the cache isn't shown?
+			-- 			if (not unitsAdded[unitName] and keystoneTable.guild_name == guildName and keystoneTable.date > cutoffDate) then
+			-- 				if (keystoneTable[2] > 0 or keystoneTable[6] > 0) then
+			-- 					keystoneTable[9] = UnitInParty(unitName) and (string.byte(unitName, 1) + string.byte(unitName, 2)) or 0 --isInMyParty
+			-- 					keystoneTable[10] = false --isOnline
+			-- 					newData[#newData+1] = keystoneTable
+			-- 					unitsAdded[unitName] = true
+			-- 				end
+			-- 			end
+			-- 		end
+			-- 	end
+
+			-- 	--get which column is currently selected and the sort order
+			-- 	local columnIndex, order = f.Header:GetSelectedColumn()
+			-- 	local sortByIndex = 2
+
+			-- 	--sort by player class
+			-- 	if (columnIndex == 1) then
+			-- 		sortByIndex = 5
+
+			-- 	--sort by player name
+			-- 	elseif (columnIndex == 2) then
+			-- 		sortByIndex = 1
+
+			-- 	--sort by keystone level
+			-- 	elseif (columnIndex == 3) then
+			-- 		sortByIndex = 2
+
+			-- 	--sort by dungeon name
+			-- 	elseif (columnIndex == 4) then
+			-- 		sortByIndex = 3
+
+			-- 	--sort by classic dungeon name
+			-- 	--elseif (columnIndex == 5) then
+			-- 	--	sortByIndex = 4
+
+			-- 	--sort by mythic+ ranting
+			-- 	elseif (columnIndex == 5) then
+			-- 		sortByIndex = 6
+			-- 	end
+
+			-- 	if (order == "DESC") then
+			-- 		table.sort(newData, function(t1, t2) return t1[sortByIndex] > t2[sortByIndex] end)
+			-- 	else
+			-- 		table.sort(newData, function(t1, t2) return t1[sortByIndex] < t2[sortByIndex] end)
+			-- 	end
+
+			-- 	--remove offline guild players from the list
+			-- 	for i = #newData, 1, -1 do
+			-- 		local keystoneTable = newData[i]
+			-- 		if (not keystoneTable[10]) then
+			-- 			tremove(newData, i)
+			-- 			newData.offlineGuildPlayers[#newData.offlineGuildPlayers+1] = keystoneTable
+			-- 		end
+			-- 	end
+
+			-- 	newData.offlineGuildPlayers = detailsFramework.table.reverse(newData.offlineGuildPlayers)
+
+			-- 	--put players in the group at the top of the list
+			-- 	if (IsInGroup() and not IsInRaid()) then
+			-- 		local playersInTheParty = {}
+			-- 		for i = #newData, 1, -1 do
+			-- 			local keystoneTable = newData[i]
+			-- 			if (keystoneTable[9] > 0) then
+			-- 				playersInTheParty[#playersInTheParty+1] = keystoneTable
+			-- 				tremove(newData, i)
+			-- 			end
+			-- 		end
+
+			-- 		if (#playersInTheParty > 0) then
+			-- 			table.sort(playersInTheParty, function(t1, t2) return t1[9] > t2[9] end)
+			-- 			for i = 1, #playersInTheParty do
+			-- 				local keystoneTable = playersInTheParty[i]
+			-- 				table.insert(newData, 1, keystoneTable)
+			-- 			end
+			-- 		end
+			-- 	end
+
+			-- 	--reinsert offline guild players into the data
+			-- 	local offlinePlayers = newData.offlineGuildPlayers
+			-- 	for i = 1, #offlinePlayers do
+			-- 		local keystoneTable = offlinePlayers[i]
+			-- 		newData[#newData+1] = keystoneTable
+			-- 	end
+
+			-- 	scrollFrame:SetData(newData)
+			-- 	scrollFrame:Refresh()
+			-- end
+
+			-- function f.OnKeystoneUpdate(unitId, keystoneInfo, allKeystonesInfo)
+			-- 	if (f:IsShown()) then
+			-- 		f.RefreshData()
+			-- 	end
+			-- end
+
+			-- f:SetScript("OnHide", function()
+			-- 	openRaidLib.UnregisterCallback(DetailsRatingInfoFrame, "KeystoneUpdate", "OnKeystoneUpdate")
+			-- end)
+
+			-- f:SetScript("OnUpdate", function(self, deltaTime)
+			-- 	if (not self.lastUpdate) then
+			-- 		self.lastUpdate = 0
+			-- 	end
+
+			-- 	self.lastUpdate = self.lastUpdate + deltaTime
+			-- 	if (self.lastUpdate > 1) then
+			-- 		self.lastUpdate = 0
+			-- 		self.RefreshData()
+			-- 	end
+			-- end)
 			end
 
 			--show the frame
 			DetailsRatingInfoFrame:Show()
 
-			openRaidLib.RegisterCallback(DetailsRatingInfoFrame, "KeystoneUpdate", "OnKeystoneUpdate")
-
-			local guildName = GetGuildInfo("player")
-			if (guildName) then
-				--call an update on the guild roster
-				if (C_GuildInfo and C_GuildInfo.GuildRoster) then
-					C_GuildInfo.GuildRoster()
-				end
-				DetailsRatingInfoFrame.RequestFromGuildButton:Enable()
-			else
-				DetailsRatingInfoFrame.RequestFromGuildButton:Disable()
-			end
+			openRaidLib.RegisterCallback(DetailsRatingInfoFrame, "RatingUpdate", "OnRatingUpdate")
 
 			--openRaidLib.WipeKeystoneData()
 
 			if (IsInRaid()) then
-				openRaidLib.RequestKeystoneDataFromRaid()
+				openRaidLib.RequestRatingDataFromRaid()
 			elseif (IsInGroup()) then
-				openRaidLib.RequestKeystoneDataFromParty()
+				openRaidLib.RequestRatingDataFromParty()
 			end
 
-			DetailsRatingInfoFrame.RefreshData()
+			DetailsRatingInfoFrame.RefreshRatingData()
 		end
 end
