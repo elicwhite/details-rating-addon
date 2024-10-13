@@ -49,7 +49,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			local backdrop_color_inguild = {.5, .8, .5, 0.2}
 			local backdrop_color_on_enter_inguild = {.5, 1, .5, 0.4}
 
-			local f = detailsFramework:CreateSimplePanel(UIParent, CONST_WINDOW_WIDTH, CONST_WINDOW_HEIGHT, "Mythic Levels Tohat Grant Rating (/mythic)", "DetailsRatingInfoFrame")
+			local f = detailsFramework:CreateSimplePanel(UIParent, CONST_WINDOW_WIDTH, CONST_WINDOW_HEIGHT, "Mythic Levels To Grant Rating (/mythic)", "DetailsRatingInfoFrame")
 			f:SetPoint("center", UIParent, "center", 0, 0)
 
 			f:SetScript("OnMouseDown", nil) --disable framework native moving scripts
