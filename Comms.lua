@@ -1014,19 +1014,17 @@ end
 --- rating
 --- table<dungeonId, rating>
 
-    ---@class MythicPlusRatingMapSummary	
+    ---@class MythicPlusRatingMapSummary
+    ---@field challengeModeID number
     ---@field mapScore number	
     ---@field bestRunLevel number	
     ---@field bestRunDurationMS number
     ---@field finishedSuccess boolean	
-    ---@field bestRunDurationMS number
 
     ---@class ratinginfo
     ---@field classID number
     ---@field currentSeasonScore number
-    ---structure:
-    ---[challengeModeID] = MythicPlusRatingMapSummary
-    ---@field runs table<number, MythicPlusRatingMapSummary>
+    ---@field runs MythicPlusRatingMapSummary[]
 
     --manager constructor
     openRaidLib.RatingInfoManager = {

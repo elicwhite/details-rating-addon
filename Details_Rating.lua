@@ -17,6 +17,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 		rating_cache = {}
 	end
 
+	local CLASS_TABLE = ns.getClassIDMapping();
 
 	local DUNGEONS = ns.dungeons
 
@@ -37,7 +38,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			local CONST_WINDOW_WIDTH = 672
 			local CONST_WINDOW_HEIGHT = 300
 			local CONST_SCROLL_LINE_HEIGHT = 20
-			local CONST_SCROLL_LINE_AMOUNT = 30
+			local CONST_SCROLL_LINE_AMOUNT = 10
 
 			local backdrop_color = {.2, .2, .2, 0.2}
 			local backdrop_color_on_enter = {.8, .8, .8, 0.4}
@@ -48,7 +49,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			local backdrop_color_inguild = {.5, .8, .5, 0.2}
 			local backdrop_color_on_enter_inguild = {.5, 1, .5, 0.4}
 
-			local f = detailsFramework:CreateSimplePanel(UIParent, CONST_WINDOW_WIDTH, CONST_WINDOW_HEIGHT, "Mythic Levels (/mythic)", "DetailsRatingInfoFrame")
+			local f = detailsFramework:CreateSimplePanel(UIParent, CONST_WINDOW_WIDTH, CONST_WINDOW_HEIGHT, "Mythic Levels Tohat Grant Rating (/mythic)", "DetailsRatingInfoFrame")
 			f:SetPoint("center", UIParent, "center", 0, 0)
 
 			f:SetScript("OnMouseDown", nil) --disable framework native moving scripts
@@ -187,7 +188,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				local keyLevel = 1
 				local scoreForLevel = -1
 				
-				while scoreForLevel < score do
+				while scoreForLevel <= score do
 					keyLevel = keyLevel + 1
 					scoreForLevel = getScoreForLevel(keyLevel)
 				end
@@ -197,17 +198,39 @@ function SlashCmdList.MYTHIC(msg, editbox)
 
 			local function findRunWithMatchingChallengeModeID(runs, dungeonId)
 				for _, run in ipairs(runs) do
-					if run.challengeModeID then
+					if run.challengeModeID == dungeonId then
 						return run
 					end
 				end
 				return nil -- Return nil if no matching run is found
 			end
 
+			local getRaiderIOMPlusProfileForCharacter = function(unitName)
+				local RaiderIO = _G.RaiderIO
+
+				local rioProfile
+				if (RaiderIO) then
+					local playerName, playerRealm = unitName:match("(.+)%-(.+)")
+					if (playerName and playerRealm) then
+						rioProfile = RaiderIO.GetProfile(playerName, playerRealm)
+						if (rioProfile) then
+							rioProfile = rioProfile.mythicKeystoneProfile
+						end
+					else
+						rioProfile = RaiderIO.GetProfile(unitName, GetRealmName())
+						if (rioProfile) then
+							rioProfile = rioProfile.mythicKeystoneProfile
+						end
+					end
+				end
+
+				return rioProfile
+			end
+
 			--scroll
 			local refreshScrollLines = function(self, data, offset, totalLines)
 				local RaiderIO = _G.RaiderIO
-				local faction = UnitFactionGroup("player") --this can get problems with 9.2.5 cross faction raiding
+				
 
 				for i = 1, totalLines do
 					local index = i + offset
@@ -216,24 +239,12 @@ function SlashCmdList.MYTHIC(msg, editbox)
 					if (unitTable) then
 						local line = self:GetLine(i)
 
-						local unitName, classID, currentSeasonScore, runs, inMyParty, isOnline = unpack(unitTable)
+						local unitName, classID, currentSeasonScore, runs, inMyParty, isOnline, isFriend = unpack(unitTable)
 
-						local rioProfile
-						if (RaiderIO) then
-							local playerName, playerRealm = unitName:match("(.+)%-(.+)")
-							if (playerName and playerRealm) then
-								rioProfile = RaiderIO.GetProfile(playerName, playerRealm, faction == "Horde" and 2 or 1)
-								if (rioProfile) then
-									rioProfile = rioProfile.mythicKeystoneProfile
-								end
-							else
-								rioProfile = RaiderIO.GetProfile(unitName, GetRealmName(), faction == "Horde" and 2 or 1)
-								if (rioProfile) then
-									rioProfile = rioProfile.mythicKeystoneProfile
-								end
-							end
-						end
+						-- print(unitName)
+						-- DevTools_Dump(runs)
 
+						local rioProfile = getRaiderIOMPlusProfileForCharacter(unitName)
 						-- local dungeon = DUNGEONS[i]
 						-- if (dungeon) then
 						-- 	line.shortNameText.text = dungeon.shortName
@@ -256,8 +267,10 @@ function SlashCmdList.MYTHIC(msg, editbox)
 							local rating = dungeonRun.mapScore or 0
 
 							local lowestLevel, ratingGain = getLowestDungeonLevelThatGrantsScore(rating)
-
-							if lowestLevel > 0 then
+							-- print(unitName, dungeon.keystone_instance, dungeon.shortName, rating, lowestLevel, ratingGain)
+							if (not inMyParty) then
+								line.dungeonRatingTexts[i].text = lowestLevel
+							elseif lowestLevel > 0 then
 								line.dungeonRatingTexts[i].text = lowestLevel .. " (+" .. ratingGain .. ")"
 							else
 								line.dungeonRatingTexts[i].text = ""
@@ -269,21 +282,25 @@ function SlashCmdList.MYTHIC(msg, editbox)
 						-- detailsFramework:TruncateText(line.dungeonNameText, 240)
 						-- line.classicDungeonNameText.text = "" --mapNameChallenge
 						-- detailsFramework:TruncateText(line.classicDungeonNameText, 120)
-						line.inMyParty = inMyParty > 0
+						line.inMyParty = inMyParty
 						-- line.inMyGuild = isGuildMember
 
-						-- if (rioProfile) then
-						-- 	local score = rioProfile.currentScore or 0
-						-- 	local previousScore = rioProfile.previousScore or 0
-						-- 	if (previousScore > score) then
-						-- 		score = previousScore
-						-- 		line.ratingText.text = rating .. " (" .. score .. ")"
-						-- 	else
-						-- 		line.ratingText.text = rating
-						-- 	end
-						-- else
-						-- 	line.ratingText.text = rating
-						-- end
+						if (rioProfile) then
+							local score = rioProfile.currentScore or 0
+
+							if (score > currentSeasonScore) then
+								-- They were probably an offline friend from cache
+								line.currentSeasonScoreText.text = score
+							end
+							-- if (previousScore > score) then
+							-- 	score = previousScore
+							-- 	line.currentSeasonScoreText.text = currentSeasonScore .. " (" .. score .. ")"
+							-- else
+							-- 	line.currentSeasonScoreText.text = currentSeasonScore
+							-- end
+						else
+							line.currentSeasonScoreText.text = currentSeasonScore
+						end
 
 						if (line.inMyParty) then
 							line:SetBackdropColor(unpack(backdrop_color_inparty))
@@ -449,21 +466,98 @@ function SlashCmdList.MYTHIC(msg, editbox)
 
 				return onlineFriendCharacters;
 			end
+
+			local getFriendsRaiderIOData = function()
+				local friendsData = {}
+
+				_G.getRaiderIOMPlusProfileForCharacter = getRaiderIOMPlusProfileForCharacter
+
+				local numBNetTotal = BNGetNumFriends()
+
+				--- I should perhaps include C_FriendList friends too
+				for i = 1, numBNetTotal do
+					local friendInfo = C_BattleNet.GetFriendAccountInfo(i)
+			
+					-- Check if the friend is online
+					if friendInfo and friendInfo.gameAccountInfo.isOnline then
+						local characterName = friendInfo.gameAccountInfo.characterName
+						local realmName = friendInfo.gameAccountInfo.realmName
+						local localizedClass = friendInfo.gameAccountInfo.className
+						local clientProgram = friendInfo.gameAccountInfo.clientProgram
+
+						-- if (realmName == nil) then
+						-- 	DevTools_Dump(friendInfo.gameAccountInfo)
+						-- end
+			
+						-- realmName can be nil if they are playing WoW Classic
+						if characterName ~= nil and realmName ~= nil and clientProgram == "WoW" then
+							local raiderData = getRaiderIOMPlusProfileForCharacter(characterName .. "-" .. realmName)
+							if (raiderData) then
+								local classID = CLASS_TABLE[localizedClass]
+								
+								-- Withertea
+								-- Mists
+								-- keystone_instance = 375
+								-- level = 8
+								-- timers[1] = 1080
+								-- fractionalTime = 3
+								-- chests = 0
+
+								local runs = {}
+
+								for _, run in ipairs(raiderData.sortedDungeons) do
+									if (run.level > 0) then
+										local runData = {
+											mapScore = run.level == 0 and 0 or getScoreForLevel(run.level),
+											challengeModeID = run.dungeon.keystone_instance,
+											bestRunLevel = run.level,
+											bestRunDurationMS = 0,
+											finishedSuccess = run.chests > 0
+										}
+
+										-- print(run.fractionalTime)
+
+										table.insert(runs, runData)
+									end
+								end
+								
+
+								local ratingTable = {
+									characterName,
+									classID, -- need to get the classID from a lookup 
+									raiderData.currentScore,
+									runs,
+									false, --isInMyParty
+									true, --isOnline
+									true, --isFriend
+								}
+
+								friendsData[characterName] = ratingTable
+							end
+						end
+					end
+				end
+
+				return friendsData
+			end
 			
 			function f.RefreshRatingData()
 				local newData = {}
 
 				local onlineFriends = GetOnlineBNetFriends()
+				local unitsAdded = {}
 
 				---@as table<string, ratinginfo>
 				local ratingData = openRaidLibRating.GetAllRatingInfo()
 
+				-- DevTools_Dump(ratingData)
+
 				if (ratingData) then
-					local unitsAdded = {}
 					local isOnline = true
 
 					for unitName, ratingInfo in pairs(ratingData) do
 						local isInMyParty = UnitInParty(unitName) and (string.byte(unitName, 1) + string.byte(unitName, 2)) or 0
+						local isFriend = onlineFriends[unitName]
 
 						if (ratingInfo.currentSeasonScore >= 0) then
 							local ratingTable = {
@@ -473,6 +567,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 								ratingInfo.runs,
 								isInMyParty,
 								isOnline, --is false when the unit is from the cache
+								isFriend,
 							}
 
 							newData[#newData+1] = ratingTable
@@ -492,13 +587,33 @@ function SlashCmdList.MYTHIC(msg, editbox)
 						--this unit in the cache isn't shown?
 						if (not unitsAdded[unitName] and ratingTable.date > cutoffDate) then
 							if (ratingTable[3] > 0) then --if they have rating this season
-								ratingTable[5] = false --isOnline
+								ratingTable[6] = false -- offline isOnline
 								
 								newData[#newData+1] = ratingTable
 								unitsAdded[unitName] = true
 							end
 						end
 					end
+				end
+
+				-- DevTools_Dump(newData)
+
+				local friendData = getFriendsRaiderIOData()
+				local sortedFriendData = {}
+
+				for characterName, ratingTable in pairs(friendData) do
+					if (not unitsAdded[characterName]) then
+						sortedFriendData[#sortedFriendData+1] = ratingTable
+
+						
+						unitsAdded[characterName] = true
+					end
+				end
+
+				-- Sort by keylevel
+				table.sort(sortedFriendData, function(f1, f2) return f1[3] > f2[3] end)
+				for _, value in ipairs(sortedFriendData) do
+					table.insert(newData, value)
 				end
 
 				scrollFrame:SetData(newData)
@@ -777,3 +892,17 @@ end
 -- /run DevTools_Dump(BNGetFriendInfo(1))
 
 -- /run DevTools_Dump(C_BattleNet.GetFriendAccountInfo(1))
+
+
+function ns.getClassIDMapping()
+	local classIDMapping = {}
+
+	-- Loop over all class IDs and retrieve the corresponding class info
+	for classID = 1,  GetNumClasses() do
+		local className = GetClassInfo(classID)
+		if className then
+			classIDMapping[className] = classID  -- Map localized class name to class ID
+		end
+	end
+	return classIDMapping
+end
