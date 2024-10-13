@@ -100,9 +100,9 @@ end
     --show failures (when the function return an error) results to chat
     local CONST_DIAGNOSTIC_ERRORS = false
     --show the data to be sent and data received from comm
-    local CONST_DIAGNOSTIC_COMM = false
+    local CONST_DIAGNOSTIC_COMM = true
     --show data received from other players
-    local CONST_DIAGNOSTIC_COMM_RECEIVED = false
+    local CONST_DIAGNOSTIC_COMM_RECEIVED = true
 
     local CONST_COMM_PREFIX = "LRSR"
     local CONST_COMM_PREFIX_LOGGED = "LRSR_LOGGED"
@@ -426,10 +426,11 @@ end
             if (not dataTypePrefix) then
                 openRaidLib.DiagnosticError("Invalid dataTypePrefix from player:", sender, "data:", data, "dataTypePrefix:", dataTypePrefix)
                 return
-            elseif (openRaidLib.commPrefixDeprecated[dataTypePrefix]) then
-                openRaidLib.DiagnosticError("Invalid dataTypePrefix from player:", sender, "data:", data, "dataTypePrefix:", dataTypePrefix)
-                return
             end
+            -- elseif (openRaidLib.commPrefixDeprecated[dataTypePrefix]) then
+            --     openRaidLib.DiagnosticError("Invalid dataTypePrefix from player:", sender, "data:", data, "dataTypePrefix:", dataTypePrefix)
+            --     return
+            -- end
 
             --if this is isn't a keystone data comm, check if the lib can receive comms
             if (dataTypePrefix ~= CONST_COMM_KEYSTONE_DATA_PREFIX and dataTypePrefix ~= CONST_COMM_KEYSTONE_DATAREQUEST_PREFIX) then
@@ -1206,8 +1207,8 @@ end
         -- print("deserialized")
 
         local classID = tonumber(data[1])
-        local currentSeasonScore = toNumber(data[2])
-        local numberOfRuns = toNumber(data[3]);
+        local currentSeasonScore = tonumber(data[2])
+        local numberOfRuns = tonumber(data[3]);
 
         -- unpack the table as a pairs table
         local unpackedTable = openRaidLib.UnpackTable(data, 3, true, true, numberOfRuns)
