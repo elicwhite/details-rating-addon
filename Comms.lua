@@ -1019,6 +1019,7 @@ end
     ---@field bestRunLevel number	
     ---@field bestRunDurationMS number
     ---@field finishedSuccess boolean	
+    ---@field bestRunDurationMS number
 
     ---@class ratinginfo
     ---@field classID number
@@ -1113,15 +1114,19 @@ end
         local summary = C_PlayerInfo.GetPlayerMythicPlusRatingSummary("player")
 
         ratingInfo.currentSeasonScore = summary.currentSeasonScore
+        ratingInfo.runs = summary.runs
 
-        for _, runInfo in ipairs(summary.runs) do
-            ratingInfo.runs[runInfo.challengeModeID] = {
-                mapScore = runInfo.mapScore,
-                bestRunLevel = runInfo.bestRunLevel,
-                bestRunDurationMS = runInfo.bestRunDurationMS,
-                finishedSuccess = runInfo.finishedSuccess
-            }
-        end
+        -- DevTools_Dump(openRaidLib.PackTable(ratingInfo.runs))
+
+        -- for _, runInfo in ipairs(summary.runs) do
+        --     ratingInfo.runs[] = {
+        --         challengeModeID = runInfo.challengeModeID,
+        --         mapScore = runInfo.mapScore,
+        --         bestRunLevel = runInfo.bestRunLevel,
+        --         bestRunDurationMS = runInfo.bestRunDurationMS,
+        --         finishedSuccess = runInfo.finishedSuccess
+        --     }
+        -- end
         
         local _, _, playerClassID = UnitClass("player")
         ratingInfo.classID = playerClassID
@@ -1149,10 +1154,28 @@ end
     
         local dataToSend = "" .. CONST_COMM_RATING_DATA_PREFIX .. ","
 
+        local runs = {}
+        for _, runInfo in ipairs(ratingInfo.runs) do
+            runs[#runs+1] = {
+                runInfo.challengeModeID,
+                runInfo.bestRunDurationMS,
+                runInfo.finishedSuccess and 1 or 0,
+                runInfo.mapScore,
+                runInfo.bestRunLevel
+            }
+        end
+
         dataToSend = dataToSend .. ratingInfo.classID .. ","
         dataToSend = dataToSend .. ratingInfo.currentSeasonScore .. ","
-        dataToSend = dataToSend .. openRaidLib.PackTable(ratingInfo.runs)
+        dataToSend = dataToSend .. openRaidLib.PackTableAndSubTables(runs)
         
+        -- local packed = openRaidLib.PackTableAndSubTables(runs);
+        -- DevTools_Dump(packed)
+        -- print("unpack")
+        -- local dataAsTable = {strsplit(",", packed)}
+        -- local unpackedTable = openRaidLib.UnpackTable(dataAsTable, 1, false, true, 5) -- 5 is the number of items in the run table
+        -- DevTools_Dump(unpackedTable)
+
         -- local dataToSend = CONST_COMM_RATING_DATA_PREFIX .. "," .. serialized
         -- local dataToSend = CONST_COMM_RATING_DATA_PREFIX .. "," .. ratingInfo.classID .. "," .. openRaidLib.PackTableAndSubTables(ratingInfo.summary)
         return dataToSend
@@ -1203,23 +1226,33 @@ end
             return
         end
 
-        -- DevTools_Dump(deserialized)
-        -- print("deserialized")
-
         local classID = tonumber(data[1])
         local currentSeasonScore = tonumber(data[2])
-        local numberOfRuns = tonumber(data[3]);
 
-        -- unpack the table as a pairs table
-        local unpackedTable = openRaidLib.UnpackTable(data, 3, true, true, numberOfRuns)
+        local unpackedTable = openRaidLib.UnpackTable(data, 3, false, true, 5) -- 5 is the number of items in the run table
 
+        local runs = {}
+        for _, runInfo in ipairs(unpackedTable) do
+            local challengeModeID, bestRunDurationMS, finishedSuccess, mapScore, bestRunLevel = unpack(runInfo)
+            
+            runs[#runs+1] = {
+                challengeModeID = challengeModeID,
+                bestRunDurationMS = bestRunDurationMS,
+                finishedSuccess = finishedSuccess == 1 and true or false,
+                mapScore = mapScore,
+                bestRunLevel = bestRunLevel
+            }
+        end
+
+        -- DevTools_Dump(unpackedTable)
         local ratingInfo = openRaidLib.RatingInfoManager.GetRatingInfo(unitName, true)
         ratingInfo.classID = classID
         ratingInfo.currentSeasonScore = currentSeasonScore
+        ratingInfo.runs = runs
 
-        for dungeonId, info in pairs(unpackedTable) do
-            ratingInfo.runs[dungeonId] = info
-        end
+        -- for dungeonId, info in pairs(unpackedTable) do
+        --     ratingInfo.runs[dungeonId] = info
+        -- end
 
         --trigger public callback
         openRaidLib.publicCallback.TriggerCallback("RatingUpdate", unitName, ratingInfo, openRaidLib.RatingInfoManager.RatingData)
@@ -1644,6 +1677,9 @@ function openRaidLib.PackTable(table)
     newString = newString:gsub(",$", "")
     return newString
 end
+
+-- /dump #(C_PlayerInfo.GetPlayerMythicPlusRatingSummary("player").runs)
+-- /dump #(C_PlayerInfo.GetPlayerMythicPlusRatingSummary("player").runs[1])
 
 function openRaidLib.PackTableAndSubTables(table)
     local totalSize = 0

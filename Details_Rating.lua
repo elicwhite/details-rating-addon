@@ -195,6 +195,15 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				return keyLevel, scoreForLevel - score
 			end
 
+			local function findRunWithMatchingChallengeModeID(runs, dungeonId)
+				for _, run in ipairs(runs) do
+					if run.challengeModeID then
+						return run
+					end
+				end
+				return nil -- Return nil if no matching run is found
+			end
+
 			--scroll
 			local refreshScrollLines = function(self, data, offset, totalLines)
 				local RaiderIO = _G.RaiderIO
@@ -241,11 +250,13 @@ function SlashCmdList.MYTHIC(msg, editbox)
 
 						for i = 1, #DUNGEONS do
 							local dungeon = DUNGEONS[i]
-							local dungeonRun = runs[dungeon.keystone_instance] or {}
+
+							-- Update this to find the run with the matching challengeModeID
+							local dungeonRun = findRunWithMatchingChallengeModeID(runs, dungeon.keystone_instance) or {}
 							local rating = dungeonRun.mapScore or 0
 
 							local lowestLevel, ratingGain = getLowestDungeonLevelThatGrantsScore(rating)
-							
+
 							if lowestLevel > 0 then
 								line.dungeonRatingTexts[i].text = lowestLevel .. " (+" .. ratingGain .. ")"
 							else
