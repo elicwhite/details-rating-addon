@@ -100,9 +100,9 @@ end
     --show failures (when the function return an error) results to chat
     local CONST_DIAGNOSTIC_ERRORS = false
     --show the data to be sent and data received from comm
-    local CONST_DIAGNOSTIC_COMM = true
+    local CONST_DIAGNOSTIC_COMM = false
     --show data received from other players
-    local CONST_DIAGNOSTIC_COMM_RECEIVED = true
+    local CONST_DIAGNOSTIC_COMM_RECEIVED = false
 
     local CONST_COMM_PREFIX = "LRSR"
     local CONST_COMM_PREFIX_LOGGED = "LRSR_LOGGED"
@@ -1665,6 +1665,14 @@ function openRaidLib.PackTableAndSubTables(table)
     return newString
 end
 
+local selectIndexes = function(table, startIndex, amountIndexes, zeroIfNil)
+    local values = {}
+    for i = startIndex, startIndex+amountIndexes do
+        values[#values+1] = tonumber(table[i]) or (zeroIfNil and 0) or table[i]
+    end
+    return values
+end
+
 --transform a string table into a regular table
 --@table: a table with unknown values
 --@index: where in the table is the information we want
@@ -1709,3 +1717,4 @@ function openRaidLib.UnpackTable(table, index, isPair, valueIsTable, amountOfVal
 
     return result
 end
+
