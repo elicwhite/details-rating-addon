@@ -213,7 +213,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 						-- detailsFramework:TruncateText(line.dungeonNameText, 240)
 						-- line.classicDungeonNameText.text = "" --mapNameChallenge
 						-- detailsFramework:TruncateText(line.classicDungeonNameText, 120)
-						-- line.inMyParty = inMyParty > 0
+						line.inMyParty = inMyParty > 0
 						-- line.inMyGuild = isGuildMember
 
 						-- if (rioProfile) then
@@ -250,6 +250,11 @@ function SlashCmdList.MYTHIC(msg, editbox)
 							-- line.ratingText.textcolor = "white"
 						else
 							line.currentSeasonScoreText.textcolor = "gray"
+
+							for i = 1, #DUNGEONS do
+								line.dungeonRatingTexts[i].textcolor = "gray"
+							end
+
 						-- 	line.shortNameText.textcolor = "gray"
 						-- 	line.playerNameText.textcolor = "gray"
 						-- 	line.keystoneLevelText.textcolor = "gray"
@@ -269,8 +274,8 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			local lineOnEnter = function(self)
 				if (self.inMyParty) then
 					self:SetBackdropColor(unpack(backdrop_color_on_enter_inparty))
-				elseif (self.inMyGuild) then
-					self:SetBackdropColor(unpack(backdrop_color_on_enter_inguild))
+				-- elseif (self.inMyGuild) then
+				-- 	self:SetBackdropColor(unpack(backdrop_color_on_enter_inguild))
 				else
 					self:SetBackdropColor(unpack(backdrop_color_on_enter))
 				end
@@ -278,8 +283,8 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			local lineOnLeave = function(self)
 				if (self.inMyParty) then
 					self:SetBackdropColor(unpack(backdrop_color_inparty))
-				elseif (self.inMyGuild) then
-					self:SetBackdropColor(unpack(backdrop_color_inguild))
+				-- elseif (self.inMyGuild) then
+				-- 	self:SetBackdropColor(unpack(backdrop_color_inguild))
 				else
 					self:SetBackdropColor(unpack(backdrop_color))
 				end
