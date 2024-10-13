@@ -3,6 +3,7 @@
 ## Notes: Show dungeon levels for your party members
 ## RequiredDeps: Details
 ## IconTexture: Interface\Icons\TEMP
+## SavedVariables: rating_cache
 
 Details_Rating.lua
 Comms.lua

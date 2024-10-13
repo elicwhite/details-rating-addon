@@ -6,8 +6,6 @@ if (DetailsFramework.IsTBCWow() or DetailsFramework.IsWotLKWow() or DetailsFrame
 	return
 end
 
-Details.rating_cache = {}
-
 ---@type detailsframework
 local detailsFramework = DetailsFramework
 
@@ -15,14 +13,14 @@ SLASH_MYTHIC1 = "/mythic"
 SLASH_MYTCHI2 = "/rg"
 
 function SlashCmdList.MYTHIC(msg, editbox)
+	if rating_cache == nil then
+		rating_cache = {}
+	end
+
+
 	local DUNGEONS = ns.dungeons
 
 	table.sort(DUNGEONS, function(d1, d2) return d1.shortName < d2.shortName end)
-
-	for i = 1, #DUNGEONS do
-        local dungeon = DUNGEONS[i] ---@type Dungeon
-		print(dungeon.shortName);
-    end
 
 	-- for i=1,GetNumPartyMembers() do 
     --     local roleName = "party"..i
@@ -176,7 +174,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 					if (unitTable) then
 						local line = self:GetLine(i)
 
-						local unitName, classID, currentSeasonScore, runs = unpack(unitTable)
+						local unitName, classID, currentSeasonScore, runs, inMyParty, isOnline = unpack(unitTable)
 
 						local rioProfile
 						if (RaiderIO) then
@@ -234,33 +232,34 @@ function SlashCmdList.MYTHIC(msg, editbox)
 						-- 	line.ratingText.text = rating
 						-- end
 
-						-- if (line.inMyParty) then
-						-- 	line:SetBackdropColor(unpack(backdrop_color_inparty))
+						if (line.inMyParty) then
+							line:SetBackdropColor(unpack(backdrop_color_inparty))
 						-- elseif (isGuildMember) then
 						-- 	line:SetBackdropColor(unpack(backdrop_color_inguild))
-						-- else
+						else
 							line:SetBackdropColor(unpack(backdrop_color))
-						-- end
+						end
 
 						local _, className = GetClassInfo(classID)
-
-						-- if (isOnline) then
+						
+						line.playerNameText.textcolor = className
+						if (isOnline) then
 							-- line.shortNameText.textcolor = "white"
-							line.playerNameText.textcolor = className
 							line.currentSeasonScoreText.textcolor = {RaiderIO.GetScoreColor(currentSeasonScore)}
 							
 							-- line.keystoneLevelText.textcolor = "white"
 							-- line.dungeonNameText.textcolor = "white"
 							-- line.classicDungeonNameText.textcolor = "white"
 							-- line.ratingText.textcolor = "white"
-						-- else
+						else
+							line.currentSeasonScoreText.textcolor = "gray"
 						-- 	line.shortNameText.textcolor = "gray"
 						-- 	line.playerNameText.textcolor = "gray"
 						-- 	line.keystoneLevelText.textcolor = "gray"
 						-- 	line.dungeonNameText.textcolor = "gray"
 						-- 	line.classicDungeonNameText.textcolor = "gray"
 						-- 	line.ratingText.textcolor = "gray"
-						-- end
+						end
 					end
 				end
 			end
@@ -365,22 +364,79 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			for i = 1, CONST_SCROLL_LINE_AMOUNT do
 				scrollFrame:CreateLine(createLineForScroll)
 			end
+
+			local GetOnlineBNetFriends = function()
+				local onlineFriendCharacters = {}
+
+				local numBNetTotal = BNGetNumFriends()
+
+				--- I should perhaps include C_FriendList friends too
+				for i = 1, numBNetTotal do
+					local friendInfo = C_BattleNet.GetFriendAccountInfo(i)
+			
+					-- Check if the friend is online
+					if friendInfo and friendInfo.gameAccountInfo.isOnline then
+						local characterName = friendInfo.gameAccountInfo.characterName
+						local clientProgram = friendInfo.gameAccountInfo.clientProgram
+			
+						if characterName ~= nil and clientProgram == "WoW" then
+							onlineFriendCharacters[characterName] = true
+						end
+					end
+				end
+
+				return onlineFriendCharacters;
+			end
 			
 			function f.RefreshRatingData()
 				local newData = {}
+
+				local onlineFriends = GetOnlineBNetFriends()
+
 				---@as table<string, ratinginfo>
 				local ratingData = openRaidLibRating.GetAllRatingInfo()
 
-				if (ratingData) then
-					for unitName, ratingInfo in pairs(ratingData) do
-						local ratingTable = {
-							unitName,
-							ratingInfo.classID,
-							ratingInfo.currentSeasonScore,
-							ratingInfo.runs,
-						}
 
-						newData[#newData+1] = ratingTable
+				if (ratingData) then
+					local unitsAdded = {}
+					local isOnline = true
+
+					for unitName, ratingInfo in pairs(ratingData) do
+						local isInMyParty = UnitInParty(unitName) and (string.byte(unitName, 1) + string.byte(unitName, 2)) or 0
+
+						if (ratingInfo.currentSeasonScore > 0) then
+							local ratingTable = {
+								unitName,
+								ratingInfo.classID,
+								ratingInfo.currentSeasonScore,
+								ratingInfo.runs,
+								isInMyParty,
+								isOnline, --is false when the unit is from the cache
+							}
+
+							newData[#newData+1] = ratingTable
+							unitsAdded[unitName] = true
+
+							--is this unitName listed as a player in the player's guild?
+							if (onlineFriends[unitName]) then
+								--store the player information into a cache
+								ratingTable.date = time()
+								rating_cache[unitName] = ratingTable
+							end
+						end
+					end
+
+					local cutoffDate = time() - (86400 * 7) --7 days
+					for unitName, ratingTable in pairs(rating_cache) do
+						--this unit in the cache isn't shown?
+						if (not unitsAdded[unitName] and ratingTable.date > cutoffDate) then
+							if (ratingTable[3] > 0) then --if they have rating this season
+								ratingTable[5] = false --isOnline
+								
+								newData[#newData+1] = ratingTable
+								unitsAdded[unitName] = true
+							end
+						end
 					end
 				end
 
@@ -646,3 +702,19 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			DetailsRatingInfoFrame.RefreshRatingData()
 		end
 end
+
+
+
+-- /run DevTools_Dump(C_FriendList.GetFriendInfo("Cellwynn"))
+-- /run DevTools_Dump(C_FriendList.GetFriendInfoByIndex(1))
+
+-- /run DevTools_Dump(C_FriendList.GetFriendInfoByIndex(1))
+
+-- /run DevTools_Dump(FRIENDS_LIST_MANAGER:FindDataByDisplayName("Cellwynn"))
+
+-- /run print(C_FriendList.GetNumFriends())
+
+-- C_BattleNet.GetGameAccountInfoByID
+-- /run DevTools_Dump(BNGetFriendInfo(1))
+
+-- /run DevTools_Dump(C_BattleNet.GetFriendAccountInfo(1))
