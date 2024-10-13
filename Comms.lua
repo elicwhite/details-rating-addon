@@ -272,107 +272,107 @@ function tempCache.SaveCacheOnCVar(data)
 end
 
 function tempCache.RestoreData()
-    local data = C_CVar.GetCVar(CONST_CVAR_TEMPCACHE)
-    if (data and type(data) == "string" and string.len(data) > 2) then
-        local LibAceSerializer = LibStub:GetLibrary("AceSerializer-3.0", true)
-        if (LibAceSerializer) then
-            local okay, cacheInfo = LibAceSerializer:Deserialize(data)
-            if (okay) then
-                local age = cacheInfo.createdAt
-                --if the data is older than 5 minutes, much has been changed from the group and the data is out dated
-                if (age + (60 * 5) < time()) then
-                    return
-                end
+    -- local data = C_CVar.GetCVar(CONST_CVAR_TEMPCACHE)
+    -- if (data and type(data) == "string" and string.len(data) > 2) then
+    --     local LibAceSerializer = LibStub:GetLibrary("AceSerializer-3.0", true)
+    --     if (LibAceSerializer) then
+    --         local okay, cacheInfo = LibAceSerializer:Deserialize(data)
+    --         if (okay) then
+    --             local age = cacheInfo.createdAt
+    --             --if the data is older than 5 minutes, much has been changed from the group and the data is out dated
+    --             if (age + (60 * 5) < time()) then
+    --                 return
+    --             end
 
-                local unitsInfo = cacheInfo.unitsInfo
-                local cooldownsInfo = cacheInfo.cooldownsInfo
-                local gearInfo = cacheInfo.gearInfo
+    --             local unitsInfo = cacheInfo.unitsInfo
+    --             local cooldownsInfo = cacheInfo.cooldownsInfo
+    --             local gearInfo = cacheInfo.gearInfo
 
-                local okayUnitsInfo, unitsInfo = LibAceSerializer:Deserialize(unitsInfo)
-                local okayCooldownsInfo, cooldownsInfo = LibAceSerializer:Deserialize(cooldownsInfo)
-                local okayGearInfo, gearInfo = LibAceSerializer:Deserialize(gearInfo)
+    --             local okayUnitsInfo, unitsInfo = LibAceSerializer:Deserialize(unitsInfo)
+    --             local okayCooldownsInfo, cooldownsInfo = LibAceSerializer:Deserialize(cooldownsInfo)
+    --             local okayGearInfo, gearInfo = LibAceSerializer:Deserialize(gearInfo)
 
-                if (okayUnitsInfo and unitsInfo) then
-                    openRaidLib.UnitInfoManager.UnitData = tempCache.copyCache(openRaidLib.UnitInfoManager.UnitData, unitsInfo)
-                else
-                    tempCache.AddDebugText("invalid UnitInfo")
-                end
+    --             if (okayUnitsInfo and unitsInfo) then
+    --                 openRaidLib.UnitInfoManager.UnitData = tempCache.copyCache(openRaidLib.UnitInfoManager.UnitData, unitsInfo)
+    --             else
+    --                 tempCache.AddDebugText("invalid UnitInfo")
+    --             end
 
-                if (okayCooldownsInfo and cooldownsInfo) then
-                    openRaidLib.CooldownManager.UnitData = tempCache.copyCache(openRaidLib.CooldownManager.UnitData, cooldownsInfo)
-                else
-                    tempCache.AddDebugText("invalid CooldownsInfo")
-                end
+    --             if (okayCooldownsInfo and cooldownsInfo) then
+    --                 openRaidLib.CooldownManager.UnitData = tempCache.copyCache(openRaidLib.CooldownManager.UnitData, cooldownsInfo)
+    --             else
+    --                 tempCache.AddDebugText("invalid CooldownsInfo")
+    --             end
 
-                if (okayGearInfo and gearInfo) then
-                    openRaidLib.GearManager.UnitData = tempCache.copyCache(openRaidLib.GearManager.UnitData, gearInfo)
-                else
-                    tempCache.AddDebugText("invalid GearInfo")
-                end
-            else
-                tempCache.AddDebugText("Deserialization not okay, reason: " .. cacheInfo)
-            end
-        else
-            tempCache.AddDebugText("LibAceSerializer not found")
-        end
-    else
-        if (not data) then
-            tempCache.AddDebugText("invalid temporary cache: getCVar returned nil")
-        elseif (type(data) ~= "string") then
-            tempCache.AddDebugText("invalid temporary cache: getCVar did not returned a string")
-        elseif (string.len(data) < 2) then
-            tempCache.AddDebugText("invalid temporary cache: data length lower than 2 bytes (first login?)")
-        else
-            tempCache.AddDebugText("invalid temporary cache: no reason found")
-        end
-    end
+    --             if (okayGearInfo and gearInfo) then
+    --                 openRaidLib.GearManager.UnitData = tempCache.copyCache(openRaidLib.GearManager.UnitData, gearInfo)
+    --             else
+    --                 tempCache.AddDebugText("invalid GearInfo")
+    --             end
+    --         else
+    --             tempCache.AddDebugText("Deserialization not okay, reason: " .. cacheInfo)
+    --         end
+    --     else
+    --         tempCache.AddDebugText("LibAceSerializer not found")
+    --     end
+    -- else
+    --     if (not data) then
+    --         tempCache.AddDebugText("invalid temporary cache: getCVar returned nil")
+    --     elseif (type(data) ~= "string") then
+    --         tempCache.AddDebugText("invalid temporary cache: getCVar did not returned a string")
+    --     elseif (string.len(data) < 2) then
+    --         tempCache.AddDebugText("invalid temporary cache: data length lower than 2 bytes (first login?)")
+    --     else
+    --         tempCache.AddDebugText("invalid temporary cache: no reason found")
+    --     end
+    -- end
 end
 
 function tempCache.SaveData()
-    tempCache.AddDebugText("SaveData() called.")
+    -- tempCache.AddDebugText("SaveData() called.")
 
-    local LibAceSerializer = LibStub:GetLibrary("AceSerializer-3.0", true)
-    if (LibAceSerializer) then
-        local allUnitsInfo = openRaidLib.UnitInfoManager.UnitData
-        local allUnitsCooldowns = openRaidLib.CooldownManager.UnitData
-        local allPlayersGear = openRaidLib.GearManager.UnitData
+    -- local LibAceSerializer = LibStub:GetLibrary("AceSerializer-3.0", true)
+    -- if (LibAceSerializer) then
+    --     local allUnitsInfo = openRaidLib.UnitInfoManager.UnitData
+    --     local allUnitsCooldowns = openRaidLib.CooldownManager.UnitData
+    --     local allPlayersGear = openRaidLib.GearManager.UnitData
 
-        local cacheInfo = {
-            createdAt = time(),
-        }
+    --     local cacheInfo = {
+    --         createdAt = time(),
+    --     }
 
-        local unitsInfoSerialized = LibAceSerializer:Serialize(allUnitsInfo)
-        local unitsCooldownsSerialized = LibAceSerializer:Serialize(allUnitsCooldowns)
-        local playersGearSerialized = LibAceSerializer:Serialize(allPlayersGear)
+    --     local unitsInfoSerialized = LibAceSerializer:Serialize(allUnitsInfo)
+    --     local unitsCooldownsSerialized = LibAceSerializer:Serialize(allUnitsCooldowns)
+    --     local playersGearSerialized = LibAceSerializer:Serialize(allPlayersGear)
 
-        if (unitsInfoSerialized) then
-            cacheInfo.unitsInfo = unitsInfoSerialized
-            tempCache.AddDebugText("SaveData() units info serialized okay.")
-        else
-            tempCache.AddDebugText("SaveData() units info serialized failed.")
-        end
+    --     if (unitsInfoSerialized) then
+    --         cacheInfo.unitsInfo = unitsInfoSerialized
+    --         tempCache.AddDebugText("SaveData() units info serialized okay.")
+    --     else
+    --         tempCache.AddDebugText("SaveData() units info serialized failed.")
+    --     end
 
-        if (unitsCooldownsSerialized) then
-            cacheInfo.cooldownsInfo = unitsCooldownsSerialized
-            tempCache.AddDebugText("SaveData() cooldowns info serialized okay.")
-        else
-            tempCache.AddDebugText("SaveData() cooldowns info serialized failed.")
-        end
+    --     if (unitsCooldownsSerialized) then
+    --         cacheInfo.cooldownsInfo = unitsCooldownsSerialized
+    --         tempCache.AddDebugText("SaveData() cooldowns info serialized okay.")
+    --     else
+    --         tempCache.AddDebugText("SaveData() cooldowns info serialized failed.")
+    --     end
 
-        if (playersGearSerialized) then
-            cacheInfo.gearInfo = playersGearSerialized
-            tempCache.AddDebugText("SaveData() gear info serialized okay.")
-        else
-            tempCache.AddDebugText("SaveData() gear info serialized failed.")
-        end
+    --     if (playersGearSerialized) then
+    --         cacheInfo.gearInfo = playersGearSerialized
+    --         tempCache.AddDebugText("SaveData() gear info serialized okay.")
+    --     else
+    --         tempCache.AddDebugText("SaveData() gear info serialized failed.")
+    --     end
 
-        local cacheInfoSerialized = LibAceSerializer:Serialize(cacheInfo)
-        tempCache.SaveCacheOnCVar(cacheInfoSerialized)
-    else
-        tempCache.AddDebugText("SaveData() AceSerializer not found.")
-    end
+    --     local cacheInfoSerialized = LibAceSerializer:Serialize(cacheInfo)
+    --     tempCache.SaveCacheOnCVar(cacheInfoSerialized)
+    -- else
+    --     tempCache.AddDebugText("SaveData() AceSerializer not found.")
+    -- end
 
-    tempCache.SaveDebugText()
+    -- tempCache.SaveDebugText()
 end
 
 

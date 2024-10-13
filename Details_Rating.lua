@@ -34,7 +34,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 	if (openRaidLib and openRaidLibRating) then
 		if (not DetailsRatingInfoFrame) then
 			
-			local CONST_WINDOW_WIDTH = 512
+			local CONST_WINDOW_WIDTH = 672
 			local CONST_WINDOW_HEIGHT = 300
 			local CONST_SCROLL_LINE_HEIGHT = 20
 			local CONST_SCROLL_LINE_AMOUNT = 30
@@ -121,7 +121,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				local dungeon = DUNGEONS[i] ---@type Dungeon
 				table.insert(headerTable, {
 					text = dungeon.shortName,
-					width = 40,        -- Adjust width as needed
+					width = 60,        -- Adjust width as needed
 					canSort = true,
 					dataType = "string", -- Assuming shortName is a string, adjust if necessary
 					order = "DESC",
@@ -158,6 +158,42 @@ function SlashCmdList.MYTHIC(msg, editbox)
 
 			f.Header = detailsFramework:CreateHeader(f, headerTable, headerOptions, "DetailsRatingInfoFrameHeader")
 			f.Header:SetPoint("topleft", f, "topleft", 3, -25)
+
+			local getScoreForLevel = function(keyLevel)
+				local base = 125
+				if (keyLevel > 12) then
+					base = 145
+				elseif (keyLevel > 7) then
+					base = 130
+				end
+			
+				local affixes = 1
+				if (keyLevel >= 10) then
+					affixes = 4
+				end
+			
+				if (keyLevel >= 7) then
+					affixes = 3
+				end
+			
+				if (keyLevel >= 4) then
+					affixes = 2
+				end
+			
+				return base + (keyLevel * 15) + (affixes * 10)
+			end
+
+			local getLowestDungeonLevelThatGrantsScore = function(score)
+				local keyLevel = 1
+				local scoreForLevel = -1
+				
+				while scoreForLevel < score do
+					keyLevel = keyLevel + 1
+					scoreForLevel = getScoreForLevel(keyLevel)
+				end
+			
+				return keyLevel, scoreForLevel - score
+			end
 
 			--scroll
 			local refreshScrollLines = function(self, data, offset, totalLines)
@@ -205,7 +241,16 @@ function SlashCmdList.MYTHIC(msg, editbox)
 
 						for i = 1, #DUNGEONS do
 							local dungeon = DUNGEONS[i]
-							line.dungeonRatingTexts[i].text = runs[dungeon.keystone_instance].bestRunLevel or ""
+							local dungeonRun = runs[dungeon.keystone_instance] or {}
+							local rating = dungeonRun.mapScore or 0
+
+							local lowestLevel, ratingGain = getLowestDungeonLevelThatGrantsScore(rating)
+							
+							if lowestLevel > 0 then
+								line.dungeonRatingTexts[i].text = lowestLevel .. " (+" .. ratingGain .. ")"
+							else
+								line.dungeonRatingTexts[i].text = ""
+							end
 						end
 
 						-- line.keystoneLevelText.text = level
@@ -244,6 +289,10 @@ function SlashCmdList.MYTHIC(msg, editbox)
 							-- line.shortNameText.textcolor = "white"
 							line.currentSeasonScoreText.textcolor = {RaiderIO.GetScoreColor(currentSeasonScore)}
 							
+							for i = 1, #DUNGEONS do
+								line.dungeonRatingTexts[i].textcolor = "white"
+							end
+
 							-- line.keystoneLevelText.textcolor = "white"
 							-- line.dungeonNameText.textcolor = "white"
 							-- line.classicDungeonNameText.textcolor = "white"
@@ -398,7 +447,6 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				---@as table<string, ratinginfo>
 				local ratingData = openRaidLibRating.GetAllRatingInfo()
 
-
 				if (ratingData) then
 					local unitsAdded = {}
 					local isOnline = true
@@ -406,7 +454,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 					for unitName, ratingInfo in pairs(ratingData) do
 						local isInMyParty = UnitInParty(unitName) and (string.byte(unitName, 1) + string.byte(unitName, 2)) or 0
 
-						if (ratingInfo.currentSeasonScore > 0) then
+						if (ratingInfo.currentSeasonScore >= 0) then
 							local ratingTable = {
 								unitName,
 								ratingInfo.classID,
@@ -692,8 +740,6 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			DetailsRatingInfoFrame:Show()
 
 			openRaidLibRating.RegisterCallback(DetailsRatingInfoFrame, "RatingUpdate", "OnRatingUpdate")
-
-			--openRaidLib.WipeKeystoneData()
 
 			if (IsInRaid()) then
 				openRaidLibRating.RequestRatingDataFromRaid()
