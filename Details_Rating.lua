@@ -61,7 +61,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 
 			f:SetScript("OnEvent", function(self, event, ...)
 				if (f:IsShown()) then
-					if (event == "GUILD_ROSTER_UPDATE") then
+					if (event == "GROUP_ROSTER_UPDATE") then
 						self:RefreshRatingData()
 					end
 				end
@@ -70,33 +70,30 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			local statusBar = detailsFramework:CreateStatusBar(f)
 			statusBar.text = statusBar:CreateFontString(nil, "overlay", "GameFontNormal")
 			statusBar.text:SetPoint("left", statusBar, "left", 5, 0)
-			statusBar.text:SetText("By Terciob | From Details! Damage Meter")
+			statusBar.text:SetText("By Withertea | From Details! Group Rating")
 			detailsFramework:SetFontSize(statusBar.text, 12)
 			detailsFramework:SetFontColor(statusBar.text, "gray")
 
-			local requestFromGuildButton = detailsFramework:CreateButton(f, function()
-				local guildName = GetGuildInfo("player")
-				if (guildName) then
-					f:RegisterEvent("GUILD_ROSTER_UPDATE")
+			local requestFromPartyButton = detailsFramework:CreateButton(f, function()
+				if (IsInGroup()) then
+					f:RegisterEvent("GROUP_ROSTER_UPDATE")
 
 					C_Timer.NewTicker(1, function()
 						f:RefreshRatingData()
 					end, 30)
 
 					C_Timer.After(30, function()
-						f:UnregisterEvent("GUILD_ROSTER_UPDATE")
+						f:UnregisterEvent("GROUP_ROSTER_UPDATE")
 					end)
-					C_GuildInfo.GuildRoster()
 
-					openRaidLibRating.RequestRatingDataFromGuild()
-					openRaidLib.RequestKeystoneDataFromGuild()
+					openRaidLibRating.RequestRatingDataFromParty()
 				end
-			end, 100, 22, "Request from Guild")
-			requestFromGuildButton:SetPoint("bottomleft", statusBar, "topleft", 2, 2)
-			requestFromGuildButton:SetTemplate(detailsFramework:GetTemplate("button", "OPTIONS_BUTTON_TEMPLATE"))
-			requestFromGuildButton:SetIcon("UI-RefreshButton", 20, 20, "overlay", {0, 1, 0, 1}, "lawngreen")
-			requestFromGuildButton:SetFrameLevel(f:GetFrameLevel()+5)
-			f.RequestFromGuildButton = requestFromGuildButton
+			end, 100, 22, "Request from Party")
+			requestFromPartyButton:SetPoint("bottomleft", statusBar, "topleft", 2, 2)
+			requestFromPartyButton:SetTemplate(detailsFramework:GetTemplate("button", "OPTIONS_BUTTON_TEMPLATE"))
+			requestFromPartyButton:SetIcon("UI-RefreshButton", 20, 20, "overlay", {0, 1, 0, 1}, "lawngreen")
+			requestFromPartyButton:SetFrameLevel(f:GetFrameLevel()+5)
+			f.RequestFromPartyButton = requestFromPartyButton
 
 			--header
 
