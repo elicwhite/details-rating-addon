@@ -100,7 +100,7 @@ end
     --show failures (when the function return an error) results to chat
     local CONST_DIAGNOSTIC_ERRORS = false
     --show the data to be sent and data received from comm
-    local CONST_DIAGNOSTIC_COMM = true
+    local CONST_DIAGNOSTIC_COMM = false
     --show data received from other players
     local CONST_DIAGNOSTIC_COMM_RECEIVED = false
 

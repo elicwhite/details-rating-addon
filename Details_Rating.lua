@@ -366,7 +366,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				scrollFrame:CreateLine(createLineForScroll)
 			end
 			
-			function f.RefreshRatingData() 
+			function f.RefreshRatingData()
 				local newData = {}
 				---@as table<string, ratinginfo>
 				local ratingData = openRaidLibRating.GetAllRatingInfo()
@@ -633,14 +633,14 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			--show the frame
 			DetailsRatingInfoFrame:Show()
 
-			openRaidLib.RegisterCallback(DetailsRatingInfoFrame, "RatingUpdate", "OnRatingUpdate")
+			openRaidLibRating.RegisterCallback(DetailsRatingInfoFrame, "RatingUpdate", "OnRatingUpdate")
 
 			--openRaidLib.WipeKeystoneData()
 
 			if (IsInRaid()) then
-				openRaidLib.RequestRatingDataFromRaid()
+				openRaidLibRating.RequestRatingDataFromRaid()
 			elseif (IsInGroup()) then
-				openRaidLib.RequestRatingDataFromParty()
+				openRaidLibRating.RequestRatingDataFromParty()
 			end
 
 			DetailsRatingInfoFrame.RefreshRatingData()
