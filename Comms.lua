@@ -1111,8 +1111,8 @@ end
         --- I really just want this whole thing
         local summary = C_PlayerInfo.GetPlayerMythicPlusRatingSummary("player")
 
-        ratingInfo.currentSeasonScore = summary.currentSeasonScore
-        ratingInfo.runs = summary.runs
+        ratingInfo.currentSeasonScore = summary.currentSeasonScore or 0
+        ratingInfo.runs = summary.runs or {}
 
         -- DevTools_Dump(openRaidLib.PackTable(ratingInfo.runs))
 
