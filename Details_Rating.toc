@@ -5,6 +5,7 @@
 ## IconTexture: Interface\Icons\TEMP
 ## SavedVariables: rating_cache
 
-Details_Rating.lua
-Comms.lua
+Libs/LibStub/LibStub.lua
 db/db_dungeons.lua
+Comms.lua
+Details_Rating.lua

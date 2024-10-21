@@ -10,7 +10,7 @@ end
 local detailsFramework = DetailsFramework
 
 SLASH_MYTHIC1 = "/mythic"
-SLASH_MYTCHI2 = "/rg"
+SLASH_MYTHIC2 = "/rg"
 
 function SlashCmdList.MYTHIC(msg, editbox)
 	if rating_cache == nil then
@@ -29,10 +29,9 @@ function SlashCmdList.MYTHIC(msg, editbox)
     -- end
 
 	---@module 'Comms'
-	local openRaidLibRating = LibStub:GetLibrary("LibOpenRaid_Rating-1.0", true)
-	local openRaidLib = LibStub:GetLibrary("LibOpenRaid-1.0", true)
+	local openRaidLibRating = LibStub:GetLibrary("LibOpenRaid_Rating-1.0", false)
 
-	if (openRaidLib and openRaidLibRating) then
+	if (openRaidLibRating) then
 		if (not DetailsRatingInfoFrame) then
 			
 			local CONST_WINDOW_WIDTH = 672
@@ -627,7 +626,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 			end
 
 			f:SetScript("OnHide", function()
-				openRaidLib.UnregisterCallback(DetailsRatingInfoFrame, "RatingUpdate", "OnRatingUpdate")
+				openRaidLibRating.UnregisterCallback(DetailsRatingInfoFrame, "RatingUpdate", "OnRatingUpdate")
 			end)
 
 			f:SetScript("OnUpdate", function(self, deltaTime)

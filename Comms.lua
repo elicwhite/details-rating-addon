@@ -54,14 +54,13 @@ if (WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE and not isExpansion_Dragonflight()) t
     return
 end
 
-local LibAceSerializer = LibStub:GetLibrary("AceSerializer-3.0", true)
 
 local major = "LibOpenRaid_Rating-1.0"
 
-local CONST_LIB_VERSION = 143
+local CONST_LIB_VERSION = 144
 
-if (LIB_OPEN_RAID_MAX_VERSION) then
-    if (CONST_LIB_VERSION <= LIB_OPEN_RAID_MAX_VERSION) then
+if (LIB_OPEN_RAID_RATING_MAX_VERSION) then
+    if (CONST_LIB_VERSION <= LIB_OPEN_RAID_RATING_MAX_VERSION) then
         return
     end
 end
@@ -76,7 +75,7 @@ end
 
     openRaidLib.__version = CONST_LIB_VERSION
     LIB_OPEN_RAID_CAN_LOAD = true
-    LIB_OPEN_RAID_MAX_VERSION = CONST_LIB_VERSION
+    LIB_OPEN_RAID_RATING_MAX_VERSION = CONST_LIB_VERSION
 
     --locals
     local unpack = table.unpack or _G.unpack
