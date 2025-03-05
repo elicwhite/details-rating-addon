@@ -1,4 +1,4 @@
-## Interface: 110002
+## Interface: 110007, 110100
 ## Title: Details!: M+ Party Rating (plugin)
 ## Notes: Show dungeon levels for your party members
 ## RequiredDeps: Details
