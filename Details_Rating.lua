@@ -183,17 +183,17 @@ function SlashCmdList.MYTHIC(msg, editbox)
 				return base + (keyLevel * 15) + (affixes * 10)
 			end
 
-			local getLowestDungeonLevelThatGrantsScore = function(score)
-				local keyLevel = 1
-				local scoreForLevel = -1
+			-- local getLowestDungeonLevelThatGrantsScore = function(score)
+			-- 	local keyLevel = 1
+			-- 	local scoreForLevel = -1
 				
-				while scoreForLevel <= score do
-					keyLevel = keyLevel + 1
-					scoreForLevel = getScoreForLevel(keyLevel)
-				end
+			-- 	while scoreForLevel <= score do
+			-- 		keyLevel = keyLevel + 1
+			-- 		scoreForLevel = getScoreForLevel(keyLevel)
+			-- 	end
 			
-				return keyLevel, scoreForLevel - score
-			end
+			-- 	return keyLevel, scoreForLevel - score
+			-- end
 
 			local function findRunWithMatchingChallengeModeID(runs, dungeonId)
 				for _, run in ipairs(runs) do
@@ -263,14 +263,22 @@ function SlashCmdList.MYTHIC(msg, editbox)
 
 							-- Update this to find the run with the matching challengeModeID
 							local dungeonRun = findRunWithMatchingChallengeModeID(runs, dungeon.keystone_instance) or {}
-							local rating = dungeonRun.mapScore or 0
 
-							local lowestLevel, ratingGain = getLowestDungeonLevelThatGrantsScore(rating)
-							-- print(unitName, dungeon.keystone_instance, dungeon.shortName, rating, lowestLevel, ratingGain)
-							if (not inMyParty) then
-								line.dungeonRatingTexts[i].text = lowestLevel
-							elseif lowestLevel > 0 then
-								line.dungeonRatingTexts[i].text = lowestLevel .. " (+" .. ratingGain .. ")"
+							local bestRunDurationS = (dungeonRun.bestRunDurationMS or 0) / 1000
+							local bestRunLevel = dungeonRun.bestRunLevel or 0
+
+							if (bestRunLevel > 0) then
+								local prefix = ""
+								if (bestRunDurationS > 0) then
+									if (bestRunDurationS <= dungeon.timers[1]) then
+									  prefix = "+++"
+									elseif (bestRunDurationS <= dungeon.timers[2]) then
+									  prefix = "++"
+									elseif (bestRunDurationS <= dungeon.timers[3]) then
+									  prefix = "+"
+									end
+								end
+								line.dungeonRatingTexts[i].text = prefix .. bestRunLevel
 							else
 								line.dungeonRatingTexts[i].text = ""
 							end
