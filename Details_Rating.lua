@@ -510,7 +510,7 @@ function SlashCmdList.MYTHIC(msg, editbox)
 											mapScore = run.level == 0 and 0 or getScoreForLevel(run.level),
 											challengeModeID = run.dungeon.keystone_instance,
 											bestRunLevel = run.level,
-											bestRunDurationMS = 0,
+											bestRunDurationMS = (run.dungeon.timers[4 - run.chests] or 0) * 1000,
 											finishedSuccess = run.chests > 0
 										}
 
